@@ -71,7 +71,10 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
      once and ignores later edits to the filter, so the reference must change */
   --glass-filter: url(#gcA);
 
-  --bead: 48px;
+  /* 62px, which is the original 48 up by 30%. Everything that needs to know the
+     bead's size now measures the element or derives from this token, so this is
+     the one number. */
+  --bead: 62px;
 
   /* THE SPLIT. The row is two panes now: a frosted text pane on the left and the
      preview pane on the right. --split is the left pane's share of the glass and
@@ -82,6 +85,18 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
   --vgap: 12px;
   --frost-t: 3.5px;      /* the text pane is frosted, the preview pane is not */
   --pad: clamp(20px, 5vw, 76px);
+  /* HOW FAR THE RAIL CAPSULE DRAWS IN once you are into the projects.
+
+     This was margin:0 max(14px, calc((100% - 1100px) / 2)), which is a fixed
+     1100px capsule centred in whatever space is left. Nothing else on the page
+     has a max width, so on anything bigger than the laptop it was tuned on the
+     rows kept growing and the nav did not: at 2560 the rows are 2532px wide and
+     the capsule was still 1100px, a 1432px mismatch, and at 4K it was 2712px.
+
+     Now it is an inset rather than a width, and it grows at 5vw, the same rate
+     as --pad, so the capsule draws in at the same rate the page's type does and
+     can never become an island again. One number to tune. */
+  --rail-inset: clamp(14px, 5vw, 148px);
   --ease: cubic-bezier(.22,.61,.36,1);
 }
 
@@ -171,8 +186,10 @@ a{ color:inherit; text-decoration:none; }
   }
 }
 .rail.tight .rail-in{
-  margin:0 max(14px, calc((100% - 1100px) / 2));
-  padding:12px 26px;
+  margin:0 var(--rail-inset);
+  /* 26px of inner padding reads thin once the capsule is 3500px wide, so this
+     grows with it, gently, and still lands near 26px on a laptop */
+  padding:12px clamp(22px, 2vw, 46px);
   border-radius:999px;
   border-bottom-color:transparent;
   box-shadow:0 10px 30px rgba(22,23,26,calc(var(--glass-shadow) * 1.9));
@@ -2099,9 +2116,7 @@ if (!touch && PREVIEW !== "off") {
   /* the last box written to #art, so a scroll frame that resolves to the same
      document position does no style work at all */
   let boxX = NaN, boxY = NaN, boxW = NaN, boxH = NaN;
-  const PAGE_H = 1000;   /* matches the iframe height in the stylesheet */
-  const BEAD = parseFloat(getComputedStyle(document.documentElement)
-                 .getPropertyValue("--bead")) || 48;
+  /* PAGE_H and a BEAD reading lived here and nothing read either of them. */
   /* No horizontal aim any more. The iframe is exactly the row's width, so any
      sideways shift left an empty strip, which is why some rows were blank on
      the left while image backed rows were not. */
@@ -2990,12 +3005,19 @@ document.getElementById("replay")?.addEventListener("click", () => {
   const nib = dot.firstElementChild;
 
   /* ---- THE DRIVER ---- */
-  const BEAD  = 48;    /* cursor diameter at rest */
+  /* MEASURED, not a literal. This was a hardcoded 48 while the cursor loop
+     measured the element, so raising the --bead token made the bridge draw a
+     48px bead where a 62px one actually was, and the handoff popped. */
+  let BEAD = dot.offsetWidth || 62;
+  addEventListener("resize", () => { BEAD = dot.offsetWidth || BEAD; }, { passive:true });
   const IN    = 64;    /* gap at which merging begins, px, edge to edge */
   const OUT   = 92;    /* and at which it lets go. Later than it took hold, so a
                           pointer resting on the threshold cannot flicker the
                           bridge on and off frame to frame. */
-  const KREF  = 52;    /* smooth union radius at contact for a bead at rest */
+  /* smooth union radius per unit of bead radius: 52px at the original 24px
+     radius. Expressed as a ratio so the neck keeps its proportion whatever the
+     bead is, rather than staying 52px around a bigger body. */
+  const KREL  = 52 / 24;
   const PRESS = 1.5;   /* press scale, cursor only */
   const PULL  = 7;     /* how far the target's own edge leans out to meet the
                           bead before they touch. Anticipation is the whole
@@ -3231,7 +3253,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
        52px, so pressing fattens the neck instead of leaving it the same width
        around a bigger body. It also rises faster than it falls, which is what
        makes the neck stretch thin and break late on the way out. */
-    const kWant = (KREF / (BEAD / 2)) * R0 * t;
+    const kWant = KREL * R0 * t;
     kS += (kWant - kS) * (kWant > kS ? 0.34 : 0.11);
     const K = kS;
 
