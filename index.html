@@ -1,0 +1,3301 @@
+<!DOCTYPE html>
+<html lang="en" class="booting">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anshul Patria</title>
+<meta name="description" content="Interactive tools that run in a browser. Eight live builds by Anshul Patria.">
+<meta property="og:title" content="Anshul Patria">
+<meta property="og:description" content="Interactive tools that run in a browser. Eight live builds.">
+<meta property="og:type" content="website">
+<meta name="author" content="Anshul Patria">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#E4E5E0">
+<link rel="canonical" href="https://anshulpatria.github.io/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="og.png">
+<meta property="og:site_name" content="Anshul Patria">
+<meta property="og:url" content="https://anshulpatria.github.io/">
+<meta property="og:image" content="https://anshulpatria.github.io/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ASCII rendering of a cowboy cat, drawn by the Line Visualizer tool">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Anshul Patria">
+<meta name="twitter:description" content="Interactive tools that run in a browser. Eight live builds.">
+<meta name="twitter:image" content="https://anshulpatria.github.io/og.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<!-- Without script the loader never finishes, so html.booting keeps the page
+     locked at overflow:hidden behind a white overlay and .rise never reaches
+     opacity 1: a blank screen, permanently. This unlocks it. The project rows
+     are built by script and will not be there, but the masthead, the footer and
+     the links are, which is better than nothing at all. -->
+<noscript><style>
+html.booting, html.booting body{ overflow:auto !important; height:auto !important; }
+#boot, #prologue, #runway, #skip, #cur{ display:none !important; }
+.rise{ opacity:1 !important; transform:none !important; }
+</style></noscript>
+
+<style>
+:root{
+  --paper:    #E4E5E0;
+  --paper-2:  #EDEEEA;
+  --plate:    #FFFFFF;
+  --ink:      #16171A;
+  --ink-soft: #6E706C;
+  --signal:   #2B2BEE;
+  --rule:     #C9CAC3;
+
+  --f-display: "Bricolage Grotesque", sans-serif;
+  --f-body:    "Instrument Sans", sans-serif;
+
+  --glass-radius: 18px;
+  --glass-edge: 14px;
+  --glass-blur: 0px;
+  --glass-sat: 125%;
+  --glass-bright: 1.00;
+  --glass-tint: 0.40;
+  --glass-spec: 0.90;
+  --glass-shadow: 0.10;
+  /* the id is flipped on every change: Chrome resolves backdrop-filter url()
+     once and ignores later edits to the filter, so the reference must change */
+  --glass-filter: url(#gcA);
+
+  --bead: 48px;
+
+  /* THE SPLIT. The row is two panes now: a frosted text pane on the left and the
+     preview pane on the right. --split is the left pane's share of the glass and
+     --vgap is the paper channel between them, which is what reads as the divide.
+     Both panes and the grid that fills them are derived from these two numbers,
+     so the glass and the layout cannot drift apart. */
+  --split: 0.34;
+  --vgap: 12px;
+  --frost-t: 3.5px;      /* the text pane is frosted, the preview pane is not */
+  --pad: clamp(20px, 5vw, 76px);
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; }
+
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--f-body);
+  font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* These two are the ASCII ground. Without position:fixed they sit in normal
+   flow as two full screens of text ABOVE the rail, which is exactly the
+   section that kept appearing before the navigation bar. */
+#bgInk,#bgHot{
+  position:fixed; inset:0; margin:0; z-index:0;
+  pointer-events:none; overflow:hidden; white-space:pre;
+  font-family:ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+}
+/* The ground was landing at roughly the same grey as --ink-soft, which is what
+   the meta, the myth line and the descriptions are set in, so text and texture
+   sat on top of each other. It is now well lighter than the lightest type, and
+   masked so it falls away entirely behind the masthead and thins under the
+   index. Prologue layers are #layerInk / #layerHot and are untouched. */
+#bgInk,#bgHot{
+  -webkit-mask-image:linear-gradient(to bottom,
+      transparent 0, rgba(0,0,0,.18) 14%, rgba(0,0,0,.55) 34%, rgba(0,0,0,.72) 62%, rgba(0,0,0,.86) 100%);
+  mask-image:linear-gradient(to bottom,
+      transparent 0, rgba(0,0,0,.18) 14%, rgba(0,0,0,.55) 34%, rgba(0,0,0,.72) 62%, rgba(0,0,0,.86) 100%);
+}
+#bgInk{ color:var(--ink); opacity:.11; }
+#bgHot{ color:var(--signal); opacity:.22; }
+
+body::after{
+  content:""; position:fixed; inset:0;
+  pointer-events:none; z-index:1; opacity:.24; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.4'/></svg>");
+}
+
+.shell{ position:relative; z-index:2; }
+::selection{ background:var(--signal); color:var(--paper); }
+a{ color:inherit; text-decoration:none; }
+:focus-visible{ outline:2px solid var(--signal); outline-offset:4px; border-radius:2px; }
+
+/* ---------- rail ---------- */
+.rail{
+  position:sticky; top:0; z-index:40;
+  transition:top .5s var(--ease);
+}
+.rail.tight{ top:10px; }
+
+/* At rest it is full bleed with a hairline. Once you are into the projects it
+   draws in to a floating capsule: margins open, the corners round off, the
+   hairline goes and a shadow appears. Margins are lengths at both ends so
+   they interpolate; a max-width from none would not. */
+.rail-in{
+  position:relative;
+  display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+  padding:18px var(--pad);
+  margin:0;
+  border-radius:0;
+  border-bottom:1px solid rgba(22,23,26,.06);
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,calc(var(--glass-tint) * 0.75)),
+      rgba(255,255,255,calc(var(--glass-tint) * 0.15)) 42%,
+      rgba(255,255,255,calc(var(--glass-tint) * 0.10)) 58%,
+      rgba(255,255,255,calc(var(--glass-tint) * 0.55)));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  box-shadow:0 0 0 rgba(22,23,26,0);
+  transition:
+    margin .55s var(--ease),
+    padding .55s var(--ease),
+    border-radius .55s var(--ease),
+    border-color .4s var(--ease),
+    box-shadow .55s var(--ease);
+}
+@supports (backdrop-filter: url(#x)){
+  .rail-in{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+.rail.tight .rail-in{
+  margin:0 max(14px, calc((100% - 1100px) / 2));
+  padding:12px 26px;
+  border-radius:999px;
+  border-bottom-color:transparent;
+  box-shadow:0 10px 30px rgba(22,23,26,calc(var(--glass-shadow) * 1.9));
+}
+/* bottom:-1px so the lower light still sits on the border box while the rail is
+   full bleed and carrying its hairline */
+.rail-in::after{
+  inset:0 0 -1px 0;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
+}
+.rail b{
+  font-family:var(--f-display);
+  font-variation-settings:"wdth" 78,"opsz" 14;
+  font-weight:700; font-size:15px; letter-spacing:.14em; text-transform:uppercase;
+}
+.rail span{ font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-soft); }
+.rail em{ font-style:normal; color:var(--signal); }
+
+/* ---------- masthead ---------- */
+.top{ padding:clamp(64px,13vh,144px) var(--pad) clamp(48px,8vh,84px); }
+
+h1{
+  font-family:var(--f-display);
+  font-variation-settings:"wdth" 82,"opsz" 96;
+  font-weight:600;
+  font-size:clamp(44px,9.2vw,134px);
+  line-height:.88;
+  letter-spacing:-.035em;
+  margin:0;
+  max-width:19ch;
+}
+h1 em{
+  font-style:normal; color:var(--ink);
+  transition:color .7s var(--ease);
+}
+h1 em.lit-word{ color:var(--signal); }
+
+.top p{
+  margin:clamp(26px,4vh,40px) 0 0;
+  max-width:46ch;
+  font-size:clamp(14px,1.4vw,18px);
+  color:var(--ink-soft);
+}
+
+/* ---------- index ---------- */
+.legend{
+  display:none; padding:0 var(--pad) 12px;
+  font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft);
+}
+.legend div{ display:grid; grid-template-columns:104px 1fr 200px; gap:28px; }
+.legend div span:last-child{ text-align:right; }
+
+.index{ border-top:1px solid var(--rule); }
+
+/* no isolation: it forms a backdrop root, and the slab could then never
+   see the preview sitting behind the row */
+.row{ display:block; position:relative; border-bottom:1px solid var(--rule); }
+
+/* THE ROW, verbatim from the last build that had it. Every one of these
+   selectors had been deleted, surviving only inside media queries, so above
+   900px the rows had no grid, no gutters, no type sizes and no stacking level.
+   Restored from source rather than rewritten, because a rewrite got the name
+   axis, the myth colour and the sliding url wrong. */
+/* the separator would cut straight through a floating slab */
+.row{ transition:border-color .34s var(--ease); }
+.row:hover{ border-bottom-color:transparent; }
+
+.row-in{
+  position:relative; z-index:2;
+  display:grid;
+  /* the grid IS the two panes. Its content box is the glass's own box, so a
+     percentage here is a percentage of the glass, and column one lands exactly
+     on the text pane while 1fr lands exactly on the preview pane. */
+  grid-template-columns:calc(100% * var(--split) - var(--vgap) / 2) 1fr;
+  column-gap:var(--vgap);
+  align-items:center;
+  padding:5px var(--glass-edge);
+  transition:transform .34s var(--ease);
+}
+/* The gutter the type keeps from the glass, unchanged: it used to come from
+   .row-in's own padding, and it now comes from the pane's, so the text sits at
+   the same distance from the glass edge as it always did, on both sides. */
+.side-t, .side-r{
+  min-width:0;
+  padding:calc(clamp(18px,2.6vw,30px) - 5px) calc(var(--pad) - var(--glass-edge));
+}
+.side-t{
+  display:grid; grid-template-columns:104px minmax(0,1fr);
+  column-gap:28px; align-items:center;
+}
+.side-r{ display:flex; align-items:center; justify-content:flex-end; }
+/* minmax(0,1fr) above stops a long word forcing the column wider than the pane;
+   this is what actually lets the line break instead of running into the glass */
+.txt{ min-width:0; container-type:inline-size; }
+/* no padding shift and no lift: hover should not move the layout */
+.row:hover .row-in{ }
+
+.ep{
+  font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-soft);
+  transition:color .35s var(--ease);
+}
+.row:hover .ep{ color:var(--signal); }
+
+/* the myth line reads at rest, the factual one opens on hover */
+.myth{
+  margin:8px 0 0; font-size:14px; line-height:1.4; color:var(--ink-soft);
+  max-width:46ch;
+}
+.row:hover .myth{ color:var(--ink); }
+
+.name{
+  font-family:var(--f-display);
+  font-variation-settings:"wdth" 86,"opsz" 60;
+  font-weight:500;
+  /* Sized against the text pane, not the viewport. At a third of the width a
+     62px display face cannot hold "Orchestrator" on one line, and 4.6vw knows
+     nothing about the pane, so it would run straight into the preview. cqi is a
+     percentage of the pane, so the name stays as large as the pane allows at
+     every viewport and the 62px ceiling is still the original one. */
+  font-size:clamp(26px, 15.5cqi, 62px);
+  line-height:.98;
+  letter-spacing:-.028em;
+  margin:0;
+  overflow-wrap:break-word;      /* a net, for a word longer than the pane */
+}
+
+.desc{
+  margin:10px 0 0; font-size:14px; line-height:1.45; color:var(--ink-soft);
+  max-width:54ch; opacity:0; max-height:0; overflow:hidden;
+  transition:opacity .4s var(--ease), max-height .5s var(--ease);
+}
+/* 80px was four lines at the old full width. The same sentence takes more lines
+   in a third of the width, and max-height has to be a real number to animate. */
+.row:hover .desc,.row:focus-visible .desc{ opacity:1; max-height:220px; }
+
+.meta{
+  display:flex; align-items:center; justify-content:flex-end; gap:16px;
+  font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft);
+  white-space:nowrap;
+}
+.meta u{
+  text-decoration:none; display:inline-block; max-width:0; overflow:hidden;
+  color:var(--signal); letter-spacing:.03em; text-transform:none; font-size:12px;
+  transition:max-width .55s var(--ease);
+}
+.row:hover .meta u{ max-width:240px; }
+
+.arrow{ flex:none; width:22px; height:22px; transition:transform .45s var(--ease); }
+.arrow line,.arrow polyline{ stroke:currentColor; stroke-width:1.4; fill:none; }
+.row:hover .arrow{ transform:translate(4px,-4px); color:var(--signal); }
+
+/* ---------- in row preview, seen through a lens ---------- */
+/* The preview is no longer a band across the row. The page is laid over the
+   row at the row's own width, and only a circle at the pointer reveals it,
+   like a magnifier. Outside that circle the row is just the glass highlight.
+   z-index 1 keeps it under .shell, so the row's own type stays on top. */
+/* THE PREVIEW BOX.
+
+   position:absolute, not fixed, and pinned in DOCUMENT coordinates. That is the
+   whole fix for the preview trailing the glass on a fast scroll. A fixed box has
+   to be repositioned by script on every scroll event, and script runs after the
+   compositor has already moved the page, so the box arrived a frame or more
+   behind the row's own glass, which is in normal flow and scrolls for free. In
+   document coordinates the box does not have to be moved on scroll at all: it
+   travels with the page exactly as the glass does, and the number written by
+   place() is scroll-invariant, so even a late frame writes the same value.
+
+   Was: a circle at the pointer, cut with clip-path, on an element that carried
+   BOTH a transform and will-change:transform, with a transformed iframe inside
+   it. Chrome promotes that iframe to its own compositing layer and applies an
+   ancestor clip as a rectangular layer clip, so the circle degraded to the
+   bounding box. The comment that used to sit here predicted that exact failure
+   as the worst case. It was not the worst case, it was the normal case.
+
+   No transform on it and no will-change, so overflow:hidden with a
+   border-radius is a clip Chrome honours even on a composited child, and
+   contain:paint states the same guarantee a second way. The opening animation
+   moved off this element onto a child, so if clip-path ever degrades the worst
+   case is the preview appearing all at once instead of growing in. Bounded, and
+   it cannot leak. */
+#art{
+  position:absolute; left:0; top:0; width:0; height:0; z-index:1;
+  pointer-events:none;
+  overflow:hidden; contain:paint; isolation:isolate;
+  border-radius:var(--glass-radius);
+  opacity:0; visibility:hidden;
+  transition:opacity .26s var(--ease), visibility 0s linear .26s;
+}
+#art.on{ opacity:1; visibility:visible; transition-delay:0s, 0s; }
+/* The opening shape. The cursor loop writes this the same frame, from the same
+   numbers, as the row's own glass. The preview cannot be a different size or
+   shape from the glass in front of it, because there is only one shape. */
+#artClip{ position:absolute; inset:0; clip-path:inset(0 round var(--glass-radius)); }
+/* Fills the rectangle. It used to be laid out at the row's size and then pushed
+   around by --ix/--iy for a parallax that no longer exists, which is what left
+   the picture short of the rectangle's height on Field. */
+#artShot{
+  position:absolute; inset:0; display:block;
+  width:100%; height:100%; object-fit:cover; object-position:center;
+  opacity:0; transition:opacity .3s var(--ease);
+}
+#artShot.ready{ opacity:1; }
+#artLive{
+  position:absolute; left:0; top:0; width:1280px; height:1000px; border:0;
+  transform-origin:0 0; opacity:0;
+  transform:translateY(var(--py,0px)) scale(var(--ls,1));
+  transition:opacity .3s var(--ease);
+}
+#artLive.ready{ opacity:1; }
+
+/* the dev panel swatch keeps its own ring, which used to share a selector
+   with the old floating panel and would have gone with it */
+.dev-rim{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  border-radius:var(--glass-radius);
+  padding:var(--glass-edge);
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.80)),
+    rgba(255,255,255,calc(var(--glass-tint) * 0.14)) 46%,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.58)));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.55));
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite:exclude;
+}
+@supports (backdrop-filter: url(#x)){
+  .dev-rim{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+
+/* ---------- foot ---------- */
+.foot{
+  /* three tracks, so the middle item is genuinely centred rather than
+     wherever space-between happens to leave it */
+  display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+  gap:20px 24px;
+  padding:clamp(52px,9vh,104px) var(--pad) 48px;
+  font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-soft);
+}
+.foot-l{ justify-self:start; }
+.foot-c{ justify-self:center; }
+.foot-r{ justify-self:end; }
+.foot a{ transition:color .3s, border-color .3s; }
+.foot-l a{ border-bottom:1px solid var(--rule); padding-bottom:2px; }
+/* the build id is logged to the console rather than shown on the page */
+.foot a:hover{ color:var(--signal); border-color:var(--signal); }
+
+/* a jelly of glass sitting on the label */
+.gpill{
+  position:relative;
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:13px 24px; border-radius:999px;
+  font-family:var(--f-body); font-size:11px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--ink); text-decoration:none;
+  border:1px solid rgba(22,23,26,.13);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.98)),
+    rgba(255,255,255,calc(var(--glass-tint) * 0.20)) 48%,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.64)));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  /* Seated, not floating. A tight contact shadow directly underneath and no
+     offset, the way a paperweight meets paper. There is no lift on hover
+     because a gap is exactly what we do not want. */
+  box-shadow:
+    0 1px 1px rgba(22,23,26,.17),
+    0 2px 7px rgba(22,23,26,.07);
+  transition:transform .28s var(--ease), box-shadow .3s var(--ease),
+             color .3s, background-color .3s;
+}
+/* inset:-1px, not 0: the containing block of an absolute child is the padding
+   box, and the pill has a 1px border, so -1px is what lands the light on the
+   border box where the box-shadow used to draw it. */
+.gpill::after{
+  inset:-1px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.5));
+}
+.foot a.gpill{ border:1px solid rgba(22,23,26,.13); padding-bottom:13px; }
+@supports (backdrop-filter: url(#x)){
+  .gpill{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+.gpill:hover{
+  color:var(--signal);
+  box-shadow:
+    0 1px 2px rgba(22,23,26,.22),
+    0 3px 10px rgba(22,23,26,.10);
+}
+/* Reach out is the one thing on the page that should be pressed */
+.gpill-blue, .foot a.gpill-blue{
+  color:#fff;
+  border-color:rgba(43,43,238,.45);
+  background:linear-gradient(to bottom,
+    rgba(43,43,238,.92),
+    rgba(43,43,238,.72) 48%,
+    rgba(43,43,238,.88));
+}
+.gpill-blue:hover, .foot a.gpill-blue:hover{
+  color:#fff; border-color:rgba(43,43,238,.62);
+  background:linear-gradient(to bottom,
+    rgba(43,43,238,.97),
+    rgba(43,43,238,.80) 48%,
+    rgba(43,43,238,.93));
+}
+/* the squish, so it reads as jelly rather than a rectangle that moves */
+.gpill:active{ transform:translateY(0) scale(.965); transition-duration:.12s; }
+.gpill-sm{ padding:10px 18px; font-size:10px; letter-spacing:.16em; }
+.foot a.gpill-sm{ padding-bottom:10px; }
+
+/* ---------- load ---------- */
+.rise{ opacity:0; transform:translateY(20px); }
+.lit .rise{
+  opacity:1; transform:none;
+  transition:opacity .8s var(--ease), transform .8s var(--ease);
+  transition-delay:var(--d,0ms);
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  /* under 900 there is not enough width for two panes to hold anything, so the
+     split folds back into the single full width row it was */
+  .row-in{ grid-template-columns:1fr; gap:10px;
+           padding:clamp(18px,2.6vw,30px) var(--pad); }
+  .side-t, .side-r{ padding:0; }
+  .side-t{ grid-template-columns:1fr; row-gap:8px; }
+  .side-r{ justify-content:flex-start; }
+  .txt{ container-type:normal; }
+  .name{ font-size:clamp(30px,4.6vw,62px); }
+  .meta{ justify-content:flex-start; }
+  .meta u{ max-width:none; overflow:visible; }
+  .desc{ opacity:1; max-height:none; }
+  h1{ max-width:none; }
+}
+@media (hover:none){
+  #art{ display:none; }
+  .desc{ opacity:1; max-height:none; }
+}
+@media (min-width:901px){ .legend{ display:block; } }
+
+
+/* ---------- dev panel, type ddsd ---------- */
+#dev{
+  position:fixed; right:18px; bottom:18px; z-index:400;
+  width:min(264px, calc(100vw - 36px));
+  max-height:calc(100dvh - 36px); overflow-y:auto; overscroll-behavior:contain;
+  padding:14px 16px 16px;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  border:1px solid rgba(22,23,26,.14); border-radius:12px;
+  box-shadow:0 12px 40px rgba(22,23,26,.14);
+  font-family:var(--f-body); color:var(--ink);
+  display:none;
+}
+#dev.on{ display:block; }
+.dev-swatch{
+  position:relative; height:76px; margin:0 0 14px;
+  border-radius:var(--glass-radius); overflow:hidden; background:var(--paper);
+}
+.dev-swatch span{
+  position:absolute; inset:0; padding:7px 9px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  font-size:11px; line-height:1.3; white-space:pre;
+  color:var(--ink); opacity:.55;
+}
+#dev h4{
+  margin:0 0 12px; font-size:10px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--ink-soft); font-weight:500;
+}
+#dev label{ display:block; margin:0 0 9px; font-size:11px; letter-spacing:.02em; }
+#dev .r{ display:flex; justify-content:space-between; margin-bottom:3px; color:var(--ink-soft); }
+#dev .r b{ font-weight:500; color:var(--signal); font-variant-numeric:tabular-nums; }
+#dev input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:2px;
+  background:rgba(22,23,26,.16); border-radius:2px; outline:none; margin:0;
+}
+#dev input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:11px; height:11px; border-radius:50%;
+  background:var(--signal); cursor:pointer;
+}
+#dev input[type=range]::-moz-range-thumb{
+  width:11px; height:11px; border:0; border-radius:50%; background:var(--signal); cursor:pointer;
+}
+#dev .btns{ display:flex; gap:8px; margin-top:12px; }
+#dev button{
+  flex:1; padding:7px 0; cursor:pointer;
+  font-family:var(--f-body); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  background:none; color:var(--ink); border:1px solid rgba(22,23,26,.2); border-radius:7px;
+}
+#dev button:hover{ color:var(--signal); border-color:var(--signal); }
+#dev .hint{ margin-top:10px; font-size:10px; color:var(--ink-soft); letter-spacing:.02em; }
+
+/* ---------- cursor ---------- */
+@media (hover:hover) and (pointer:fine){
+  html.dot, html.dot *{ cursor:none !important; }
+}
+/* One element, one backdrop-filter. No mask and no filter on it: stacking
+   mask, backdrop-filter and drop-shadow on a single layer tore on the GPU. */
+#cur{
+  position:fixed; left:0; top:0; z-index:300;
+  width:var(--bead); height:var(--bead);
+  margin:calc(var(--bead) / -2) 0 0 calc(var(--bead) / -2);
+  pointer-events:none; visibility:hidden;
+  will-change:transform;
+}
+#cur.live{ visibility:visible; }
+#cur i{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  display:block; width:var(--bead); height:var(--bead); border-radius:50%;
+  background:radial-gradient(125% 125% at 32% 26%,
+    rgba(255,255,255,.52) 0%,
+    rgba(255,255,255,.10) 38%,
+    rgba(255,255,255,0) 60%);
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,calc(var(--glass-spec) * 0.62)),
+    inset 0 2px 4px rgba(255,255,255,var(--glass-spec)),
+    inset 0 -4px 7px rgba(22,23,26,.10),
+    0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 2.2));
+}
+@supports (backdrop-filter: url(#x)){
+  #cur i{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+@keyframes beadRipple{
+  0%   { width:var(--bead);              height:var(--bead); }
+  18%  { width:calc(var(--bead) * 1.22); height:calc(var(--bead) * 1.22); }
+  40%  { width:calc(var(--bead) * 0.93); height:calc(var(--bead) * 0.93); }
+  60%  { width:calc(var(--bead) * 1.06); height:calc(var(--bead) * 1.06); }
+  80%  { width:calc(var(--bead) * 0.98); height:calc(var(--bead) * 0.98); }
+  100% { width:var(--bead);              height:var(--bead); }
+}
+#cur.tap i{ animation:beadRipple 1.15s var(--ease); }
+
+/* THE MERGE.
+   The bead no longer opens into a 3x circle floating over the preview. Over a
+   row it hands itself to the row's own glass rectangle: the rectangle opens
+   from the bead's exact position at the bead's exact size, and the bead lets go
+   as it does. Same material on both, so it reads as one object changing shape.
+
+   There is no CSS transition on the bead's size any more, and that removal is
+   the Image 1 fix. The bead used to take 300ms to grow from 48px to 144px while
+   the preview's clip radius reached its final value on the first frame, so for
+   those 300ms the preview was simply larger than the glass around it. Size,
+   position and opening are now all lerped in one loop off one clock. */
+#cur i{ transition:width .3s var(--ease), height .3s var(--ease),
+                    background .3s var(--ease), opacity .16s linear; }
+#cur.merged i{ opacity:0; }
+@media (prefers-reduced-motion:reduce){ #cur.tap i{ animation:none; } }
+
+/* ---------- the merge surface ----------
+   Two layers that carry NO material of their own. Every frame the merge loop
+   reads the target's own computed background and backdrop-filter and copies
+   them onto #mgFill, so there is exactly one glass recipe on this page and it
+   still lives on the objects. Nothing here declares a tint, a blur, a
+   refraction or an edge light.
+
+   #mgFill is the body of the merged silhouette MINUS the target's own
+   rectangle, which is the one decomposition that never stacks two
+   backdrop-filters on the same pixel. #mgRim is the same silhouette's edge
+   light, clipped to the fill so it reads as an inset the way every other
+   surface's does. */
+/* position:absolute, not fixed, and pinned in document coordinates for the same
+   reason #art is: the target's glass is in normal flow and scrolls on the
+   compositor, so a viewport-positioned bridge arrives a frame behind it and the
+   neck tears away from the panel on a fast scroll. */
+#mgFill, #mgRim{
+  position:absolute; left:0; top:0; z-index:290;
+  display:none; pointer-events:none;
+}
+#mgRim{ z-index:291; overflow:visible; }
+@media (hover:none),(pointer:coarse){ #mgFill,#mgRim{ display:none !important; } }
+
+/* ---------- row glass ---------- */
+/* The bead's material, and only the hovered row carries a filter. */
+/* THE PREVIEW PANE, the right two thirds. Same glass, same morph, same preview
+   as before; only its left edge moved. */
+.glass{
+  position:absolute; z-index:1;
+  top:5px; bottom:5px; right:var(--glass-edge);
+  left:calc(var(--glass-edge) + (100% - 2 * var(--glass-edge)) * var(--split) + var(--vgap) / 2);
+  display:block; pointer-events:none;
+  border-radius:var(--glass-radius);
+  /* the shape the bead becomes. Written every frame by the cursor loop with the
+     identical string it writes to the preview's clip. */
+  clip-path:inset(0 round var(--glass-radius));
+  opacity:0; transition:opacity .3s var(--ease);
+  /* Tint, both edge lights and the drop shadow are declared once, in ONE GLASS
+     below. They used to be declared here as well, and every one of them was
+     dead: same specificity, later rule wins. */
+}
+.row:hover .glass, .row:focus-visible .glass{ opacity:1; }
+@supports (backdrop-filter: url(#x)){
+  .row:hover .glass, .row:focus-visible .glass{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+
+/* ---------- THE CUTTABLE EDGE LIGHT ----------
+   Every glass surface the cursor is allowed to merge with now carries its inset
+   lights on a pseudo element instead of on itself. A box-shadow cannot be
+   removed in one region, but a layer can be masked, so the merge writes one
+   custom property, --rim-cut, and the target's own edge light opens a mouth
+   exactly where the neck arrives. Unset, the mask is `none` and the light is
+   whole, which is the resting state and costs nothing.
+
+   The outer drop shadows stay on the elements themselves. Masking those would
+   cut the shadow the object casts on the paper, which has nothing to do with
+   the merge. */
+.glass::after, .glass-t::after, .gpill::after, .rail-in::after{
+  content:""; position:absolute; border-radius:inherit;
+  pointer-events:none;
+  -webkit-mask-image:var(--rim-cut, none);
+          mask-image:var(--rim-cut, none);
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+}
+.glass::after, .glass-t::after{ inset:0; }
+
+/* THE TEXT PANE, the left third. The same material as the nav bar and the same
+   opening morph as the preview pane, driven from the same pointer in the same
+   frame. The one difference is the frost: the type is read THROUGH this pane, so
+   it is pushed further out of focus than the pane that has to stay legible as a
+   preview. */
+.glass-t{
+  position:absolute; z-index:1;
+  top:5px; bottom:5px; left:var(--glass-edge);
+  right:calc(var(--glass-edge) + (100% - 2 * var(--glass-edge)) * (1 - var(--split)) + var(--vgap) / 2);
+  display:block; pointer-events:none;
+  border-radius:var(--glass-radius);
+  clip-path:inset(0 round var(--glass-radius));
+  opacity:0; transition:opacity .3s var(--ease);
+  backdrop-filter:blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  -webkit-backdrop-filter:blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+}
+.row:hover .glass-t, .row:focus-visible .glass-t{ opacity:1; }
+@supports (backdrop-filter: url(#x)){
+  .row:hover .glass-t, .row:focus-visible .glass-t{
+    backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+/* Folding the split away has to be declared HERE, after the two panes, not up in
+   the layout media block: same specificity, and the later rule wins. */
+@media (max-width:900px){
+  .glass-t{ display:none; }
+  .glass{ left:var(--glass-edge); }
+}
+
+/* ---------- ONE GLASS ----------
+   The navigation bar is the material. Everything else on the page now wears it.
+
+   Five of the seven glass surfaces already did: .rail-in, #skip, .gpill and
+   .dev-rim all shared the rail's vertical tint. The two that did not were the
+   bead and the row rectangle, which carried a radial hotspot at 32% 26% with a
+   1px ring instead, and that is the whole reason they never looked like the
+   rail: different gradient, different edge lights, different shadow.
+
+   The tint, both edge lights and the refraction are identical everywhere now.
+   The only thing that still varies is how far the drop shadow reaches, because
+   that is a function of how big the object is and how far off the paper it sits:
+   a 48px bead with the rail capsule's 30px shadow reads as a hovering marble.
+   Everything here is a token, so this block is the one place to tune it. */
+.glass,
+.glass-t,
+#cur i,
+#skip,
+.gpill:not(.gpill-blue),
+.dev-rim{
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.75)),
+    rgba(255,255,255,calc(var(--glass-tint) * 0.15)) 42%,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.10)) 58%,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.55)));
+}
+/* the rail's two edge lights, on every surface */
+#skip{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45)),
+    0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 1.5));
+}
+.gpill:not(.gpill-blue){
+  box-shadow:
+    0 1px 1px rgba(22,23,26,.17),
+    0 2px 7px rgba(22,23,26,.07);
+}
+.gpill:not(.gpill-blue)::after{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
+}
+/* the row rectangle is the same size and the same distance off the paper as the
+   rail capsule, so it takes the rail's shadow verbatim. The OUTER shadow stays
+   on the element; the two edge lights sit on ::after so the merge can cut a
+   mouth in them. This is still the one place they are declared. */
+.glass, .glass-t{
+  box-shadow:0 10px 30px rgba(22,23,26,calc(var(--glass-shadow) * 1.9));
+}
+.glass::after, .glass-t::after{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
+}
+/* the bead is small and sits close, so only its reach is scaled down */
+#cur i{
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45)),
+    0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 2.2));
+}
+
+/* ---------- loader ---------- */
+html.booting, html.booting body{ overflow:hidden; height:100%; }
+
+#boot{
+  position:fixed; inset:0; z-index:200;
+  background:#FFFFFF;
+  display:flex; align-items:flex-end;
+  padding:0 var(--pad) clamp(22px,4.5vh,54px);
+  transition:opacity .55s var(--ease);
+}
+#boot.gone{ opacity:0; pointer-events:none; }
+.boot-num{
+  font-family:var(--f-display);
+  font-variation-settings:"wdth" 82,"opsz" 96;
+  font-weight:600;
+  font-size:clamp(78px,18vw,252px);
+  line-height:.72; letter-spacing:-.045em;
+  color:var(--ink);
+  font-variant-numeric:tabular-nums;
+  display:flex; align-items:baseline;
+  margin-bottom:-.05em;              /* seats the digits on the corner optically */
+  opacity:0; transition:opacity .45s var(--ease);
+}
+.boot-num.on{ opacity:1; }
+.boot-num i{
+  font-style:normal; color:var(--signal);
+  font-size:.26em; margin-left:.10em; letter-spacing:-.02em;
+}
+.boot-bar{ position:absolute; left:0; right:0; bottom:0; height:2px; background:rgba(22,23,26,.10); }
+.boot-bar span{ display:block; height:100%; width:0; background:var(--signal); }
+
+/* ---------- prologue ---------- */
+#prologue{
+  position:fixed; inset:0; z-index:100;
+  background:#FFFFFF; overflow:hidden;
+  will-change:opacity;
+}
+.stage{ position:absolute; inset:0; }
+.stage pre{
+  position:absolute; inset:0; margin:0;
+  display:block;
+  font-family:ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  white-space:pre; overflow:hidden;
+}
+#layerInk{ color:var(--ink); }
+#layerHot{ color:var(--signal); }
+
+
+
+/* An icon at rest, a labelled capsule on hover. The chevron alone does not
+   say what it does, which is a real problem for the one control that lets
+   someone out of a long intro. */
+#skip{
+  position:fixed; top:11px; right:clamp(12px,4vw,68px); z-index:101;
+  display:flex; align-items:center; width:44px; height:44px;
+  border:1px solid rgba(22,23,26,.12); border-radius:999px;
+  cursor:pointer; overflow:hidden; padding:0;
+  font-family:var(--f-body); color:var(--ink);
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.85)),
+    rgba(255,255,255,calc(var(--glass-tint) * 0.18)) 48%,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.58)));
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 1.5));
+  transition:width .44s var(--ease), color .3s var(--ease),
+             border-color .3s var(--ease), box-shadow .4s var(--ease);
+}
+@supports (backdrop-filter: url(#x)){
+  #skip{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+}
+#skip svg{ flex:none; display:block; width:20px; height:20px; margin:0 12px; fill:none; stroke:currentColor; stroke-width:1.4; }
+#skip span{
+  white-space:nowrap; opacity:0; padding-right:18px;
+  font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  transition:opacity .26s var(--ease);
+}
+#skip:hover, #skip:focus-visible{
+  width:184px; color:var(--signal); border-color:rgba(43,43,238,.30);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
+    0 8px 24px rgba(22,23,26,calc(var(--glass-shadow) * 2.0));
+}
+#skip:hover span, #skip:focus-visible span{ opacity:1; transition-delay:.10s; }
+#skip:active{ transform:scale(.96); transition-duration:.12s; }
+
+
+#runway{ height:1450vh; }
+
+
+
+/* ---------- narrow ---------- */
+@media (max-width:720px){
+  /* the rail readout is the first thing to give up the space */
+  .rail span{ display:none; }
+  .rail b{ font-size:13px; letter-spacing:.12em; }
+  .meta u{
+    display:block; max-width:100%; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;
+  }
+  .meta{ flex-wrap:wrap; gap:8px 14px; }
+  
+.myth{ font-size:13px; }
+  .desc{ font-size:13px; }
+  /* a full intro on a thumb is too long a scroll */
+  #runway{ height:820vh; }
+  .boot-num{ font-size:clamp(64px,22vw,132px); }
+}
+@media (max-width:720px){
+  .foot{ grid-template-columns:1fr; justify-items:center; text-align:center; gap:18px; }
+  .foot-l,.foot-c,.foot-r{ justify-self:center; }
+}
+@media (max-width:480px){
+  #dev{ right:10px; bottom:10px; width:calc(100vw - 20px); }
+  .foot{ gap:14px; font-size:11px; }
+  #runway{ height:640vh; }
+}
+/* the ripple and the bead are pointer effects, so they go on touch */
+@media (hover:none){
+  #cur{ display:none; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *{ animation:none !important; transition-duration:.01ms !important; }
+  .rise{ opacity:1; transform:none; }
+}
+</style>
+</head>
+
+<body>
+<pre id="bgInk" aria-hidden="true"></pre>
+<pre id="bgHot" aria-hidden="true"></pre>
+
+<svg id="glassdefs" aria-hidden="true" focusable="false" width="0" height="0">
+  <!-- THE LENS MAP, rebuilt.
+
+       The old ramp went 214 -> 128 -> 42 and stopped there, so displacement was
+       at its MAXIMUM on the rim: 0.337 of full range, which at scale 106 is 36px
+       of throw on a 144px circle. That is what dragged pixels from outside the
+       glass in under the rim and read as a second offset copy, and it is why the
+       lens gave up refraction altogether and ran on saturate(104%) instead.
+
+       Both ramps now open AND close on neutral 128. Throw falls to zero at the
+       rim and peaks just inside it, which is also what a real thick glass edge
+       does. The filter region is the element box exactly, x=0 width=100%, so no
+       pass can sample or paint a pixel outside the shape.
+
+       One filter, on every glass surface, the bead included. -->
+  <!-- the row rectangle -->
+  <filter id="gcA" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feImage preserveAspectRatio="none" result="mx" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='8'><defs><linearGradient id='h' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='rgb(128,128,128)'/><stop offset='0.055' stop-color='rgb(212,128,128)'/><stop offset='0.27' stop-color='rgb(128,128,128)'/><stop offset='0.73' stop-color='rgb(128,128,128)'/><stop offset='0.945' stop-color='rgb(44,128,128)'/><stop offset='1' stop-color='rgb(128,128,128)'/></linearGradient></defs><rect width='160' height='8' fill='url(%23h)'/></svg>"/>
+    <feImage preserveAspectRatio="none" result="my" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='160'><defs><linearGradient id='v' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='rgb(128,128,128)'/><stop offset='0.055' stop-color='rgb(128,212,128)'/><stop offset='0.27' stop-color='rgb(128,128,128)'/><stop offset='0.73' stop-color='rgb(128,128,128)'/><stop offset='0.945' stop-color='rgb(128,44,128)'/><stop offset='1' stop-color='rgb(128,128,128)'/></linearGradient></defs><rect width='8' height='160' fill='url(%23v)'/></svg>"/>
+    <feComposite in="mx" in2="my" operator="arithmetic" k1="0" k2="1" k3="1" k4="-0.502" result="lens"/>
+
+    <feColorMatrix in="SourceGraphic" result="Rc" type="matrix"
+      values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+    <feColorMatrix in="SourceGraphic" result="Gc" type="matrix"
+      values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0"/>
+    <feColorMatrix in="SourceGraphic" result="Bc" type="matrix"
+      values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+
+    <feDisplacementMap id="dR" in="Rc" in2="lens" scale="106" xChannelSelector="R" yChannelSelector="G" result="Rd"/>
+    <feDisplacementMap id="dG" in="Gc" in2="lens" scale="100" xChannelSelector="R" yChannelSelector="G" result="Gd"/>
+    <feDisplacementMap id="dB" in="Bc" in2="lens" scale="94" xChannelSelector="R" yChannelSelector="G" result="Bd"/>
+    <feBlend in="Rd" in2="Gd" mode="screen" result="rg"/>
+    <feBlend in="rg" in2="Bd" mode="screen"/>
+  </filter>
+</svg>
+
+<div id="dev" aria-hidden="true">
+  <h4>Glass</h4>
+  <div class="dev-swatch" aria-hidden="true">
+    <span>%%@@##**++==--::..  ##%%@@**++  ::--==##%%@@  ++**##%%  @@--::++==
+##**++==--::..%%@@  **++##%%  @@::--==  ++%%@@##**  ..--::==
+@@##%%**++--==::..  ++##@@%%  **--::++  ==%%##@@**  ++..::--
+%%**@@++##--::==..  @@%%++##  ::**--==  ##@@%%++**  ==::..--</span>
+    <div class="dev-rim"></div>
+  </div>
+  <div id="devRows"></div>
+  <div class="btns">
+    <button type="button" id="devReset">Reset</button>
+    <button type="button" id="devCopy">Copy CSS</button>
+  </div>
+  <div class="hint">ddsd to hide</div>
+</div>
+
+<!-- outside .shell on purpose: .shell is a stacking context at z-index 2, so the
+     preview would paint above the rows' own type from inside it, and .rise
+     carries a transform, which would make this the containing block of a row
+     rather than of the page. -->
+<div id="art" aria-hidden="true">
+  <div id="artClip">
+    <img id="artShot" alt="" decoding="async" fetchpriority="high">
+    <iframe id="artLive" title="" tabindex="-1" scrolling="no" src="about:blank"></iframe>
+  </div>
+</div>
+<!-- the merged silhouette. Empty of material on purpose: the merge loop copies
+     the target's own glass onto it every frame. -->
+<div id="mgFill" aria-hidden="true"></div>
+<svg id="mgRim" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <linearGradient id="mgGrad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="1">
+      <stop id="mgA" offset="0" stop-color="#FFFFFF" stop-opacity="0.9"></stop>
+      <stop id="mgB" offset="1" stop-color="#FFFFFF" stop-opacity="0.405"></stop>
+    </linearGradient>
+    <clipPath id="mgClip"><path id="mgClipPath" d=""></path></clipPath>
+  </defs>
+  <!-- Two strokes, one contour. mgRimPath is the dim ring the whole silhouette
+       carries; mgRimLit is the brighter light on the arcs whose outward normal
+       faces the light, which is the same recipe the panes wear as
+       `inset 0 0 0 1px` plus `inset 0 1px 0`. They never overlap: a segment
+       belongs to one or the other, so nothing blows out where they meet. -->
+  <path id="mgRimPath" d="" fill="none" stroke="url(#mgGrad)" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"
+        clip-path="url(#mgClip)"></path>
+  <path id="mgRimLit" d="" fill="none" stroke="#FFFFFF" stroke-width="2.4"
+        stroke-opacity="0.9" stroke-linecap="round" stroke-linejoin="round"
+        clip-path="url(#mgClip)"></path>
+</svg>
+<div id="cur" aria-hidden="true"><i></i></div>
+
+<div id="boot" role="status" aria-label="Loading">
+  <div class="boot-num" id="bootNum" aria-hidden="true"><span id="bootN">0</span><i>%</i></div>
+  <div class="boot-bar"><span id="bootBar"></span></div>
+</div>
+
+<button id="skip" type="button" aria-label="Skip the intro"><svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><polyline points="4,6 10,12 16,6"></polyline><polyline points="4,12 10,18 16,12"></polyline></svg><span>Skip to work</span></button>
+
+<div id="prologue" aria-hidden="true">
+  <div class="stage" id="stage">
+    <pre id="layerInk" aria-hidden="true"></pre>
+    <pre id="layerHot" aria-hidden="true"></pre>
+  </div>
+</div>
+
+<div id="runway"></div>
+
+<div class="shell">
+
+  <header class="rail" id="rail">
+    <div class="rail-in">
+      <b>Anshul Patria</b>
+      <span>now drawing <em id="fieldTag">contour field</em></span>
+    </div>
+  </header>
+
+  <section class="top">
+    <h1 class="rise" style="--d:60ms">Experiments in <em class="cyc">code</em>, <em class="cyc">design</em> and <em class="cyc">play</em>.</h1>
+    <p class="rise" style="--d:170ms">Tools, toys, games, workshop decks.</p>
+  </section>
+
+  <div class="legend rise" style="--d:250ms">
+    <div><span>Input</span><span>Project</span><span>Type</span></div>
+  </div>
+
+  <main class="index" id="index"></main>
+
+
+  <footer class="foot">
+    <span class="foot-l"><a href="https://github.com/anshulpatria">github.com/anshulpatria</a></span>
+    <span class="foot-c">
+      <a class="gpill gpill-blue" href="https://www.linkedin.com/in/anshulpatria512"
+         target="_blank" rel="noopener noreferrer">Reach out</a>
+    </span>
+    <span class="foot-r">
+      <button class="gpill gpill-sm" id="replay" type="button">Replay the intro</button>
+    </span>
+  </footer>
+
+</div>
+
+<script>
+/* ============================================================
+   0. LOADER
+   Wired to real work, not a timer. Weighted milestones: fonts are
+   the heaviest because they are the only sizeable external fetch
+   and the counter itself is set in one of them.
+   The bar paints immediately since it needs no font. The numeral
+   waits for Bricolage so the first thing on screen is not a
+   fallback face swapping under the reader.
+   ============================================================ */
+const Boot = (function(){
+  const el  = document.getElementById("boot");
+  const num = document.getElementById("bootN");
+  const bar = document.getElementById("bootBar");
+  const wrap= document.getElementById("bootNum");
+  if (!el) return { set(){} };
+
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+
+  const W = { dom: 16, font: 54, win: 30 };            /* sums to 100 */
+  const M = { dom: 0, font: 0, win: 0 };
+  let target = 0, shown = 0, ended = false;
+  const t0 = performance.now(), MIN = 950, MAX = 7000;
+
+  function recompute(){ let t = 0; for (const k in M) t += M[k]*W[k]; target = t/100; }
+  function set(k, v){ if (k in M){ M[k] = Math.max(M[k], v); recompute(); } }
+
+  set("dom", document.readyState === "loading" ? 0 : 1);
+  addEventListener("DOMContentLoaded", () => set("dom", 1));
+  addEventListener("load", () => set("win", 1));
+
+  const reveal = () => wrap && wrap.classList.add("on");
+  if (document.fonts && document.fonts.ready){
+    document.fonts.ready.then(() => set("font", 1));
+    document.fonts.load('600 1em "Bricolage Grotesque"').then(reveal, reveal);
+  } else { set("font", 1); reveal(); }
+  setTimeout(reveal, 1400);                       /* never sit on a blank screen */
+  setTimeout(() => { for (const k in M) M[k] = 1; recompute(); }, MAX);
+
+  (function loop(){
+    /* a floor on elapsed time, so a warm cache still reads as a count */
+    const goal = Math.min(target, (performance.now() - t0) / MIN);
+    shown += (goal - shown) * 0.14;
+    if (goal >= 1 && shown > 0.9985) shown = 1;
+    const pct = Math.min(100, Math.round(shown * 100));
+    if (num) num.textContent = String(pct);
+    if (bar) bar.style.width = (shown * 100).toFixed(2) + "%";
+
+    if (shown >= 1 && !ended){
+      ended = true;
+      setTimeout(() => {
+        document.documentElement.classList.remove("booting");
+        scrollTo(0, 0);
+        el.classList.add("gone");
+      }, 280);
+      setTimeout(() => el.remove(), 1000);
+      return;
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  return { set };
+})();
+
+
+/* ============================================================
+   PROJECTS, ordered as the voyage
+   Rows run in voyage order and each carries its creature, but the
+   episodes are never named. The myth stays implicit.
+   0 idle  1 metaballs  2 line grid  3 pinscreen
+   4 gravity wells  5 flow dashes  6 fluid  7 registration marks
+   ============================================================ */
+const PROJECTS = [
+  { ord:"I", plate:"lotus", field:4,
+    name:"Gravity Pong", focus:0.50, url:"https://anshulpatria.github.io/gravitypong/", input:"Keys", type:"Game",
+    myth:"You meant to leave an hour ago.",
+    desc:"Pong with gravity wells in the court. Power shots, magnets, one or two players.",
+    thumb:"shots/gravity-pong.webp" },
+
+  { ord:"II", plate:"eye", field:3,
+    name:"Pin Art 3D", focus:0.50, focusX:0.11, url:"https://anshulpatria.github.io/3D-pin-art/", input:"Orbit", type:"Toy",
+    myth:"One eye. Press it.",
+    desc:"A pinscreen driven by depth. Push pins by hand or imprint a photo, then relight it and orbit.",
+    thumb:"shots/pin-art-3d.webp" },
+
+  { ord:"III", plate:"pig", field:1,
+    name:"Brand Studio", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/brandstudio/", input:"Cursor", type:"Tool",
+    myth:"Turns one thing into another.",
+    desc:"Generates brand systems from a metaball grid. Custom SVG and canvas renderer, exports stills and video.",
+    thumb:"shots/brand-studio.webp" },
+
+  { ord:"IV", plate:"song", field:5,
+    name:"Field", url:"https://field-8yc.pages.dev/", input:"Cursor", type:"Catalog",
+    myth:"Twenty of them, and you will not look away.",
+    desc:"Twenty cursor driven generative effects. Run a tile, read the spec, change the parameters, take the source.",
+    thumb:"shots/field.webp" },
+
+  { ord:"V", plate:"bottle", field:6,
+    name:"GenAI After Hours", url:"https://anshulpatria.github.io/genaiafterhourspub/", input:"Arrows", type:"Deck",
+    myth:"Ninety minutes, not seven years.",
+    desc:"Slides from a ninety minute session on building microsites with AI tools.",
+    thumb:"shots/genai-after-hours.webp" },
+
+  { ord:"VI", plate:"none", field:8,
+    name:"Orchestrator", url:"https://youtu.be/oySlLRl5EBI", input:"Click", type:"Video",
+    myth:"Agentic workflows for beginners.",
+    desc:"A generated video, put together in under sixteen hours of prompting with Magnific.",
+    thumb:"https://img.youtube.com/vi/oySlLRl5EBI/maxresdefault.jpg" },
+
+  { ord:"VII", plate:"raft", field:2,
+    name:"Line Visualizer", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/linevisualiser/", input:"Upload", type:"Tool",
+    myth:"Built by hand out of what was lying around.",
+    desc:"Redraws any image as a line grid. Set density and contrast, export SVG, PNG or WebM.",
+    thumb:"shots/line-visualizer.webp" },
+
+  { ord:"VIII", plate:"throne", field:7,
+    name:"Artboard 42", focus:0.50, focusX:0.50, url:"https://www.artboard42.com", input:"Scroll", type:"Site",
+    myth:"Home.",
+    desc:"The main portfolio.",
+    thumb:"shots/artboard-42.webp" }
+];
+/* ============================================================
+   2. THE WORLD
+   Signed distance fields, one per creature. Two things matter here
+   beyond the shapes:
+
+   COV  every creature writes its own coverage. The compositor uses
+        painter's order, so clouds can genuinely hide the lotus and
+        a flask rim can hide what is behind it. Without this the
+        parting and the mouth entry are impossible.
+
+   P    a control object, so the choreography drives blooming,
+        blinking, parting, tilting and view angle directly.
+   ============================================================ */
+const BUILD = "b590115";
+console.log("%c" + BUILD, "font:700 14px monospace;color:#2B2BEE");
+/* the lens: what the pointer is currently over, shared with the cursor loop */
+/* the rectangle that the glass and the preview are both pinned to, shared with
+   the cursor loop so the bead knows what it is merging into */
+const LENS = { on:false, l:0, t:0, w:0, h:0, glass:null,
+               tl:0, tt:0, tw:0, th:0, glassT:null };
+const RAMP = " .:-=+*#%@";
+let COV = 1;                       /* scratch, avoids allocating per cell */
+
+const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x-a)/(b-a))); return t*t*(3-2*t); };
+const rbox  = (x, y, hw, hh, r) => {
+  const dx = Math.abs(x) - hw + r, dy = Math.abs(y) - hh + r;
+  return Math.min(Math.max(dx, dy), 0) + Math.hypot(Math.max(dx,0), Math.max(dy,0)) - r;
+};
+const fr = v => v - Math.floor(v);
+function h21(x, y){
+  let px = fr(x*123.34), py = fr(y*456.21);
+  const d = px*(px + 45.32) + py*(py + 45.32);
+  return fr((px + d) * (py + d));
+}
+function vnoise(x, y){
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx*fx*fx*(fx*(fx*6 - 15) + 10), uy = fy*fy*fy*(fy*(fy*6 - 15) + 10);
+  const a = h21(ix, iy), b = h21(ix+1, iy), c = h21(ix, iy+1), d = h21(ix+1, iy+1);
+  const t1 = a + (b - a)*ux, t2 = c + (d - c)*ux;
+  return t1 + (t2 - t1)*uy;
+}
+function fbm2(x, y){
+  let v = 0, a = 0.5;
+  for (let i = 0; i < 4; i++){ v += a*vnoise(x, y); x *= 2.03; y *= 2.03; a *= 0.5; }
+  return v;
+}
+
+const CREATURE = {
+  /* Two banks that slide apart. Each is masked to its own side of a
+     moving seam, so the gap between them is a real opening. */
+  clouds(x, y, t, P){
+    const seam = (P.part || 0) * 2.1, side = P.side || 1;
+    const bx = x - side * seam;
+    const m = sstep(-0.08, 0.26, side * bx);
+    if (m <= 0.002){ COV = 0; return 0; }
+    const str = P.stretch || 1;
+    let d = 0;
+    for (let n = 0; n < 3; n++){
+      const sc = 0.55 + n*0.42, off = n*3.7 + (side > 0 ? 11.3 : 0);
+      const q = fbm2(bx*sc + off + (P.drift || 0)*(0.5 + n*0.25), y*sc*1.7/str + off);
+      const band = 1.0 - Math.abs(y - (0.55 - n*0.62))*0.50;
+      d = Math.max(d, sstep(0.42, 0.66, q * Math.max(0, band)) * (0.40 + n*0.20));
+    }
+    COV = Math.min(1, d*2.6) * m;
+    return d;
+  },
+
+  lotus(x, y, t, P){
+    const open = P.open !== undefined ? P.open : 0.8;
+    const r = Math.hypot(x, y*1.10), a = Math.atan2(y*1.10, x);
+    let v = 0;
+    for (const ring of [[3, 0.00, 0.80], [4, 0.40, 0.54], [5, 0.20, 0.31]]){
+      const R = ring[2] * open * Math.abs(Math.cos(ring[0]*(a + ring[1])));
+      if (R < 0.04) continue;
+      if (r < R) v = Math.max(v, 0.26);
+      v = Math.max(v, 1 - sstep(0.015, 0.055, Math.abs(r - R)));
+    }
+    /* the centre disc is the handoff target for the cyclops iris */
+    if (r < 0.085) v = Math.max(v, 0.55 + 0.30*Math.max(0, 1 - r/0.085));
+    v = Math.max(v, 1 - sstep(0.075, 0.105, r));
+    if (Math.abs(x) < 0.045 && y < -0.52) v = Math.max(v, 0.75);
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  },
+
+  eye(x, y, t, P){
+    COV = 0;
+    if (Math.abs(x) > 1.16) return 0;
+    const blink = P.blink || 0, look = P.look || 0;
+    const lidH = 0.60 * Math.pow(Math.max(0, 1 - (x/1.15)**2), 0.72) * (1 - blink*0.95);
+    if (lidH < 0.014) return 0;
+    const edge = 1 - sstep(0.015, 0.075, Math.abs(Math.abs(y) - lidH));
+    if (Math.abs(y) > lidH){ COV = edge > 0.02 ? 1 : 0; return edge * 0.85; }
+    const dr = Math.hypot(x - look, y);
+    const iris  = (1 - sstep(0.28, 0.34, dr)) * 0.55;
+    const pupil = (1 - sstep(0.11, 0.15, dr)) * 1.00;
+    COV = 1;
+    return Math.max(edge*0.85, Math.max(0.12, iris, pupil));
+  },
+
+  pig(x, y, t, P){
+    const px = x, py = y - (P.nod || 0);
+    const head = rbox(px, py - 0.02, 0.68, 0.44, 0.32);
+    let v = 0;
+    if (head > -0.005){
+      for (const ex of [-0.50, 0.50]){
+        const lx = px - ex, ly = py - 0.24, hw = 0.22, hh = 0.44;
+        const e = Math.max((ly*hw + Math.abs(lx)*hh - hw*hh) / Math.hypot(hw, hh), -ly);
+        if (e < 0) v = Math.max(v, 0.28);
+        v = Math.max(v, 1 - sstep(0.015, 0.060, Math.abs(e)));
+      }
+    }
+    if (head < 0) v = Math.max(v, 0.15);
+    v = Math.max(v, 1 - sstep(0.015, 0.065, Math.abs(head)));
+    for (const ex of [-0.32, 0.32])
+      v = Math.max(v, 1 - sstep(0.85, 1.05, Math.hypot((px - ex)/0.075, (py - 0.18)/0.10)));
+    const sn = rbox(px, py + 0.22, 0.28, 0.17, 0.13);
+    if (sn < 0) v = Math.max(v, 0.32);
+    v = Math.max(v, 1 - sstep(0.015, 0.060, Math.abs(sn)));
+    for (const nx of [-0.10, 0.10])
+      v = Math.max(v, 1 - sstep(0.85, 1.05, Math.hypot((px - nx)/0.045, (py + 0.22)/0.080)));
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  },
+
+  /* real note glyphs, head and stem and flag, launched from the snout
+     and flying up and out. rise carries them along their arc. */
+  notes(x, y, t, P){
+    const rise = P.rise || 0, fall = P.fall || 0;
+    let v = 0;
+    for (let i = 0; i < 6; i++){
+      const ph = rise*1.5 - i*0.17;
+      if (ph <= 0 || ph >= 1.02) continue;
+      const dir = ((i % 2) ? 1 : -1) * (0.45 + (i % 3)*0.26);
+      const nx = dir * ph * 1.15 + 0.07*Math.sin(t*1.8 + i*2);
+      const ny = -0.18 + ph*1.02 - fall*ph*1.55;
+      const sc = 0.15 + 0.02*(i % 3);
+      const lx = (x - nx)/sc, ly = (y - ny)/sc;
+      if (Math.abs(lx) > 1.6 || Math.abs(ly) > 2.0) continue;
+      const hx = lx*0.94 + ly*0.34, hy = -lx*0.34 + ly*0.94;
+      if (Math.hypot(hx/0.44, hy/0.31) < 1) v = Math.max(v, 0.95);
+      if (lx > 0.30 && lx < 0.46 && ly > 0.05 && ly < 1.30) v = Math.max(v, 0.90);
+      if (i % 2 === 0){
+        const fy = ly - 1.12;
+        if (Math.abs(fy) < 0.34 && lx > 0.44 && lx < 0.44 + 0.42*(1 - Math.abs(fy)/0.34))
+          v = Math.max(v, 0.86);
+      }
+    }
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  },
+
+  /* clip pulls the lines in from the edges so they converge into the vessel */
+  song(x, y, t, P){
+    const spread = P.spread !== undefined ? P.spread : 0.60;
+    const baseY  = P.baseY  !== undefined ? P.baseY  : 0;
+    const flat   = P.flat   || 0;
+    const clip   = P.clip   !== undefined ? P.clip   : 2.2;
+    COV = 0;
+    if (Math.abs(x) > clip) return 0;
+    const edge = 1 - sstep(clip - 0.16, clip, Math.abs(x));
+    let v = 0;
+    for (let n = 0; n < 3; n++){
+      const amp = (0.22 - n*0.03) * (1 - flat*0.80);
+      const k = 2.4 + n*1.0, ph = t*(0.7 + n*0.25);
+      const base = baseY + (n - 1)*spread;
+      v = Math.max(v, 1 - sstep(0.012, 0.075, Math.abs(y - (base + amp*Math.sin(k*x + ph)))));
+    }
+    v *= edge;
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  },
+
+  /* tilt opens the mouth from a line into a circle. Inside the mouth the
+     creature reports zero coverage, so you see straight through it. */
+  bottle(x, y, t, P){
+    const lvl = P.level !== undefined ? P.level : -0.06;
+    const tilt = P.tilt || 0;
+    const TOP = 0.30, BOT = -0.44, RN = 0.115, RB = 0.54, MY = 0.845;
+    let v = 0;
+
+    if (tilt > 0.015){
+      const rx = RN + 0.055*tilt, ry = Math.max(0.006, rx*tilt);
+      const d = Math.hypot(x/rx, (y - MY)/ry) - 1;
+      if (d < 0){ COV = 0; return 0; }
+      v = Math.max(v, 1 - sstep(0.0, 0.16, d));
+    }
+
+    const slope = (RB - RN) / (TOP - BOT);
+    const hwAt = yy => RN + (TOP - yy) * slope;
+    const norm = Math.hypot(1, slope);
+    if (y >= BOT && y <= TOP){
+      const d = (Math.abs(x) - hwAt(y)) / norm;
+      if (d < 0) v = Math.max(v, 0.10);
+      v = Math.max(v, 1 - sstep(0.012, 0.055, Math.abs(d)));
+    }
+    if (y > TOP && y < 0.80){
+      const d = Math.abs(x) - RN;
+      if (d < 0) v = Math.max(v, 0.10);
+      v = Math.max(v, 1 - sstep(0.012, 0.055, Math.abs(d)));
+    }
+    const lip = rbox(x, y - 0.82, 0.18, 0.055, 0.02);
+    if (lip < 0) v = Math.max(v, 0.92);
+    v = Math.max(v, 1 - sstep(0.0, 0.030, Math.abs(lip)));
+    if (Math.abs(x) <= RB + 0.02) v = Math.max(v, 1 - sstep(0.010, 0.070, Math.abs(y - BOT)));
+
+    const inside = (y >= BOT + 0.025 && y <= TOP && Math.abs(x) < hwAt(y) - 0.025) ||
+                   (y > TOP && y < 0.78 && Math.abs(x) < RN - 0.025);
+    if (inside){
+      const level = lvl + 0.05*Math.sin(t*0.9) + 0.035*Math.sin(x*5 + t*1.7);
+      if (y < level) v = Math.max(v, 0.45);
+      v = Math.max(v, 1 - sstep(0.010, 0.040, Math.abs(y - level)));
+      for (let n = 0; n < 5; n++){
+        const bx = (n - 2) * 0.16;
+        const by = BOT + ((t*0.40 + n*0.23) % 1) * (level - BOT);
+        if (Math.abs(bx) < hwAt(by) - 0.05)
+          v = Math.max(v, 1 - sstep(0.026, 0.055, Math.hypot(x - bx, y - by)));
+      }
+    }
+    for (let n = 1; n <= 3; n++){
+      const gy = BOT + n*0.13, gw = hwAt(gy);
+      if (x > -gw + 0.025 && x < -gw + 0.15)
+        v = Math.max(v, (1 - sstep(0.010, 0.045, Math.abs(y - gy))) * 0.85);
+    }
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  },
+
+  raft(x, y, t, P){
+    const view = P.view !== undefined ? P.view : 1;
+    const flow = P.flow || 0;
+    let v = 0;
+    const wx  = x + flow;
+    const sea = -0.46 + 0.05*Math.sin(wx*2.4 + t*1.0) + 0.03*Math.sin(wx*4.7 - t*0.7);
+    const bob = 0.045*Math.sin(t*0.9) * view;
+
+    if (view < 0.98)
+      v = Math.max(v, (0.02 + 0.17*Math.max(0, Math.sin(wx*5.0 - y*6.0 + t*1.3))) * (1 - view));
+    if (view > 0.02){
+      if (y < sea) v = Math.max(v, 0.10*view);
+      v = Math.max(v, (1 - sstep(0.010, 0.055, Math.abs(y - sea))) * view);
+    }
+    const dh  = 0.38 + (0.09 - 0.38)*view;
+    const dy0 = (sea + 0.17)*view + bob;
+    if (Math.abs(y - dy0) < dh && Math.abs(x) < 0.62){
+      v = Math.max(v, 0.34);
+      if (Math.abs(fr((x + 3)/0.26) - 0.5) > 0.34) v = Math.max(v, 0.95);
+      if (view < 0.72 && Math.abs(fr((y + 3)/0.40) - 0.5) > 0.40) v = Math.max(v, 0.72*(1 - view));
+    }
+    if (view < 0.55)
+      v = Math.max(v, (1 - sstep(0.030, 0.058, Math.hypot(x + 0.26, y - dy0))) * (1 - view/0.55) * 0.95);
+    if (view > 0.05){
+      const mx = -0.26, mbot = dy0 + dh, mtop = dy0 + dh + 0.95*view;
+      if (Math.abs(x - mx) < 0.028 && y > mbot - 0.02 && y < mtop) v = Math.max(v, 0.95*view);
+      const st = (y - mbot) / Math.max(0.001, mtop - mbot);
+      if (st > 0.06 && st < 0.97){
+        const w = 0.72*(1 - st)*(1 + 0.09*Math.sin(t*1.4 + st*2))*view;
+        if (x > mx + 0.030 && x - mx < w){
+          v = Math.max(v, 0.22*view);
+          if (Math.abs((x - mx) - w) < 0.048) v = Math.max(v, 0.90*view);
+        }
+      }
+    }
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  },
+
+  throne(x, y, t, P){
+    const fire = P.fire !== undefined ? P.fire : 1;
+    let v = 0;
+    const back = rbox(x, y + 0.06, 0.34, 0.60, 0.10);
+    if (back < 0) v = 0.10 + 0.46*fbm2(x*9.0 + 4.0, y*9.0 + (P.grain || 0));
+    v = Math.max(v, 1 - sstep(0.015, 0.065, Math.abs(back)));
+    const seat = rbox(x, y + 0.44, 0.46, 0.08, 0.03);
+    if (seat < 0) v = Math.max(v, 0.45);
+    v = Math.max(v, 1 - sstep(0.015, 0.055, Math.abs(seat)));
+    for (const ax of [-0.46, 0.46])
+      v = Math.max(v, 1 - sstep(0.015, 0.055, Math.abs(rbox(x - ax, y + 0.28, 0.06, 0.20, 0.03))));
+    for (let n = 0; n < 2; n++)
+      v = Math.max(v, 1 - sstep(0.015, 0.055, Math.abs(rbox(x, y + 0.66 + n*0.13, 0.52 + n*0.13, 0.045, 0.02))));
+    if (fire > 0.01){
+      for (const fx of [-0.84, 0.84]){
+        const fl = (0.66 + 0.34*Math.sin(t*5.3 + fx*4)) * fire;
+        const fy = (y - 0.46) / Math.max(0.02, 0.30*fl);
+        const w  = 0.16 * Math.max(0, 1 - fy) * Math.max(0, Math.min(1, 1 + fy*1.5));
+        if (w > 0.006 && Math.abs(x - fx) < w)
+          v = Math.max(v, (0.32 + 0.60*(1 - Math.abs(x - fx)/w)) * fire);
+        if (Math.abs(x - fx) < 0.040 && y < 0.26 && y > -0.56) v = Math.max(v, 0.72);
+        if (Math.abs(x - fx) < 0.10 && Math.abs(y + 0.58) < 0.035) v = Math.max(v, 0.85);
+      }
+    }
+    COV = v > 0.02 ? 1 : 0;
+    return v;
+  }
+};
+
+
+/* ============================================================
+   1. THE GROUND, IN CHARACTERS
+   The eight hover fields, ported from the shader so the index is
+   made of the same material as the intro. Every line width is
+   expressed against CW, the height of one character cell, because
+   a threshold tuned for a 0.0006 pixel disappears completely at a
+   0.033 cell. That single conversion is the whole port.
+
+   Each field takes local coords plus the pointer and returns
+   [ink, accent]. Accent decides which colour layer it lands in.
+   ============================================================ */
+let CW = 0.033;                                  /* one cell, in y units */
+
+function fbm3(x, y){
+  let v = 0, a = 0.5;
+  for (let i = 0; i < 3; i++){ v += a*vnoise(x, y); x *= 2.03; y *= 2.03; a *= 0.5; }
+  return v;
+}
+function sdCap(px, py, ax, ay, bx, by, r){
+  const pax = px - ax, pay = py - ay, bax = bx - ax, bay = by - ay;
+  const h = Math.max(0, Math.min(1, (pax*bax + pay*bay) / Math.max(1e-6, bax*bax + bay*bay)));
+  return Math.hypot(pax - bax*h, pay - bay*h) - r;
+}
+const gauss = (dx, dy, k) => Math.exp(-(dx*dx + dy*dy) * k);
+
+const FIELD = [
+  /* 0. idle : drifting contours */
+  function (x, y, mx, my, tS, ms){
+    const t = tS*0.035, X = x*1.5, Y = y*1.5;
+    const qx = fbm3(X + t, Y + t), qy = fbm3(X + 3.2 - t, Y + 1.7 - t);
+    const rx = fbm3(X + 1.3*qx + 1.7 + t*0.6, Y + 1.3*qy + 9.2 + t*0.6);
+    const ry = fbm3(X + 1.3*qx + 8.3 - t*0.4, Y + 1.3*qy + 2.8 - t*0.4);
+    const lens = gauss(x - mx, y - my, 6) * ms;
+    const f = fbm3(X + 1.1*rx, Y + 1.1*ry) + lens*0.30;
+    const v = f * 7;                       /* 30 bands aliased at cell size */
+    const b = Math.abs(fr(v - 0.5) - 0.5);
+    return [Math.max(0, 1 - b/0.20), lens];
+  },
+
+  /* 1. Brand Studio : grid quantised metaballs */
+  function (x, y, mx, my, tS, ms){
+    const cs = 0.075;
+    const gx = (Math.floor(x/cs) + 0.5)*cs, gy = (Math.floor(y/cs) + 0.5)*cs;
+    let f = 0;
+    for (let i = 0; i < 6; i++){
+      const cx = Math.sin(tS*0.50 + i*2.10)*0.58, cy = Math.cos(tS*0.42 + i*1.70)*0.34;
+      const dx = gx - cx, dy = gy - cy;
+      f += 0.0145 / (dx*dx + dy*dy + 0.0045);
+    }
+    const dmx = gx - mx, dmy = gy - my, dd = dmx*dmx + dmy*dmy;
+    const near = Math.exp(-dd*5) * ms;
+    f += (0.024*ms) / (dd + 0.004);
+    const fill = sstep(0.92, 1.02, f);
+    const edge = sstep(0.97, 1.01, f) - sstep(1.05, 1.11, f);
+    return [fill*0.34 + edge*0.95, near];
+  },
+
+  /* 2. Line Visualizer : the cowboy cat, 90 columns of stroke */
+  function (x, y, mx, my, tS, ms, ax){
+    const cols = 56, rows = 30;
+    const cellW = ax/cols, cellH = 1/rows;
+    const ix = Math.floor((x + ax*0.5)/cellW), iy = Math.floor((y + 0.5)/cellH);
+    const cx = -ax*0.5 + (ix + 0.5)*cellW, cy = -0.5 + (iy + 0.5)*cellH;
+
+    const ox = Math.sin(tS*0.16)*0.028, oy = Math.cos(tS*0.11)*0.016;
+    const sc = 0.36 * (1 + 0.022*Math.sin(tS*0.62));
+    const sx = (cx - ox)/sc, sy = (cy - oy)/sc + 0.317;
+
+    const e = 0.010;
+    let lum = 0.030;
+    const dBody = ell(sx, sy + 0.46, 0.60, 0.50);
+    lum = Math.max(lum, ins(dBody, e)*0.13);
+    lum = Math.max(lum, rim(dBody, 0.085)*0.58);
+    const dHead = ell(sx, sy - 0.30, 0.50, 0.41);
+    lum = Math.max(lum, ins(dHead, e)*0.11);
+    lum = Math.max(lum, rim(dHead, 0.080)*0.58);
+    const dBand = Math.min(ell(sx, sy + 0.04, 0.44, 0.15), ell(sx, sy + 0.22, 0.17, 0.15));
+    lum = Math.max(lum, ins(dBand, e)*(0.34 + 0.40*(0.5 + 0.5*Math.sin((sx*1.4 + sy)*38))));
+    const dHat = Math.min(ell(sx, sy - 0.60, 1.02, 0.095),
+                          rbox(sx, sy - 0.84, 0.38, 0.21, 0.08));
+    lum = Math.max(lum, ins(dHat, e)*0.96);
+    lum = Math.max(lum, ins(ell(sx + 0.175, sy - 0.33, 0.055, 0.080), e));
+    lum = Math.max(lum, ins(ell(sx - 0.175, sy - 0.33, 0.055, 0.080), e));
+    lum += ins(dBody, e)*0.16*fbm3(sx*5, sy*5 + tS*0.05);
+
+    const push = gauss(cx - mx, cy - my, 8) * ms;
+    lum += push*0.95;
+    /* thickness has to quantise to whole characters: below the first one the
+       stroke must vanish entirely, or every cell paints and you get stripes */
+    const L = Math.max(0, Math.min(1, lum));
+    const half = 0.10 + 0.98*L;
+    const frac = Math.abs(x - cx) / (cellW*0.5);
+    return [frac < half ? Math.min(1, 0.30 + L*0.95) : 0, push];
+  },
+
+  /* 3. Pin Art : extruded pins that overlap */
+  function (x, y, mx, my, tS, ms){
+    const cs = 0.140, LX = 0.38, LY = 0.925;
+    const bx = Math.floor(x/cs), by = Math.floor(y/cs);
+    let ink = 0, acc = 0;
+    for (let j = 1; j >= -2; j--){
+      for (let i = -1; i <= 1; i++){
+        const cx = (bx + i + 0.5)*cs, cy = (by + j + 0.5)*cs;
+        const push = gauss(cx - mx, cy - my, 7) * ms;
+        const depth = Math.max(0, Math.min(1.7, vnoise((bx+i)*0.30 + tS*0.10, (by+j)*0.30)*0.85 + push*1.15));
+        const ext = depth*cs*0.55, r = cs*0.24;
+        const body = sdCap(x, y, cx, cy, cx + LX*ext, cy + LY*ext, r);
+        const cov = 1 - sstep(0, CW*0.34, body);
+        if (cov <= 0.002) continue;
+        const cap = 1 - sstep(0, CW*0.34, Math.hypot(x - (cx + LX*ext), y - (cy + LY*ext)) - r);
+        ink += (0.16 + 0.78*cap - ink)*cov;
+        acc += (push - acc)*cov;
+      }
+    }
+    return [ink*0.92, acc];
+  },
+
+  /* 4. Gravity Pong : concentric wells */
+  function (x, y, mx, my, tS, ms){
+    let ink = 0;
+    for (let i = 0; i < 2; i++){
+      const s = i === 0 ? 1 : -1;
+      const wx = 0.44*s, wy = 0.11*s + Math.sin(tS*0.5 + i*2)*0.10;
+      const d = Math.hypot(x - wx, y - wy);
+      const b = Math.abs(fr(d*7 - tS*0.42) - 0.5);
+      ink = Math.max(ink, (1 - Math.min(1, b/0.19)) * Math.exp(-d*2.9));
+    }
+    const dm = Math.hypot(x - mx, y - my);
+    const bm = Math.abs(fr(dm*7 - tS*0.42) - 0.5);
+    const rm = (1 - Math.min(1, bm/0.19)) * Math.exp(-dm*2.9) * ms;
+    return [Math.min(1, ink + rm)*0.95, rm];
+  },
+
+  /* 5. Field : compass needles, and they report which way they point.
+     Three things were making this read as scattered characters rather than as a
+     field, and none of them was the character set.
+
+     One, the angle was computed here and then dropped on the floor: only
+     coverage came back, so the renderer had nothing to draw a direction with.
+     It is returned now, as a third value.
+
+     Two, the swing to the pointer was a straight lerp between two angles. When
+     the gap was more than half a turn the needle rotated the long way round, so
+     two neighbouring cells whose resting noise differed by a hair would swing in
+     opposite directions and cross. It takes the short way now.
+
+     Three, there was no drop off at all. Every cell held a dash at the same
+     strength to the edges of the screen, which is a texture, not a field. The
+     needles are strongest under the pointer and fall away from it. */
+  function (x, y, mx, my, tS, ms){
+    const cs = 0.085;
+    const ix = Math.floor(x/cs), iy = Math.floor(y/cs);
+    const cx = (ix + 0.5)*cs, cy = (iy + 0.5)*cs;
+    const qx = x - cx, qy = y - cy;
+    const tox = mx - cx, toy = my - cy;
+    const infl = gauss(tox, toy, 6) * ms;
+
+    let ang = vnoise(ix*0.15 + tS*0.10, iy*0.15)*10;
+    const aim = Math.atan2(toy, tox) + 1.5708;          /* tangent, so they circle */
+    const TAU = Math.PI*2;
+    let turn = ((aim - ang + Math.PI) % TAU + TAU) % TAU - Math.PI;   /* short way */
+    ang += turn * infl;
+
+    /* a longer stroke, and wide enough to stay solid. Thinning it was a mistake:
+       it removed ink from a field whose whole job is to be a texture. */
+    const dx = Math.cos(ang), dy = Math.sin(ang), hl = cs*0.44;
+    const along = Math.max(-hl, Math.min(hl, qx*dx + qy*dy));
+    const dist = Math.hypot(qx - dx*along, qy - dy*along);
+    /* The solid core has to be at least one character across or nothing ever
+       samples it: at CW*0.20 the core was four tenths of a cell tall, so almost
+       every lit cell fell in the soft edge, came back under the dust threshold,
+       and printed a dot. That, not the character set, is why it read as specks. */
+    const cov = 1 - sstep(CW*0.50, CW*1.10, dist);
+
+    /* THE DROP OFF IS IN THE WEIGHT, NOT IN WHETHER THE NEEDLE EXISTS.
+       Fading the magnitude towards zero simply deleted three cells in ten and
+       read as a loss of resolution. Every cell keeps its needle; the ones near
+       the pointer are heavier, so the falloff is legible without costing ink. */
+    const near = Math.exp(-Math.hypot(tox, toy)*1.8);
+    return [cov * Math.min(1, 0.58 + 0.42*(near + infl)), infl, ang];
+  },
+
+  /* 6. GenAI After Hours : advected fluid */
+  function (x, y, mx, my, tS, ms){
+    const w1x = fbm3(x*1.2, y*1.2 + tS*0.075), w1y = fbm3(x*1.2 + tS*0.060, y*1.2 + 3.1);
+    const w2x = fbm3(x*1.2 + 1.5*w1x + 1.7 - tS*0.048, y*1.2 + 1.5*w1y + 9.2);
+    const w2y = fbm3(x*1.2 + 1.5*w1x + 8.3, y*1.2 + 1.5*w1y + 2.8 + tS*0.038);
+    const dmx = x - mx, dmy = y - my;
+    const infl = gauss(dmx, dmy, 4) * ms;
+    const L = Math.hypot(dmx, dmy) + 1e-4;
+    const px = x + 0.90*w2x + (dmx/L)*infl*0.26;
+    const py = y + 0.90*w2y + (dmy/L)*infl*0.26;
+    /* Two levels, so the fluid has bright cores inside softer bodies. It was
+       capped at 0.50 while every other field reaches 0.9 or more, which is
+       why it barely registered. */
+    const f = fbm3(px*1.8, py*1.8 + tS*0.030);
+    const body = sstep(0.40, 0.63, f);
+    const core = sstep(0.56, 0.78, f);
+    return [Math.min(1, body*0.60 + core*0.44), infl*0.85 + body*0.22];
+  },
+
+  /* 7. Artboard 42 : registration marks */
+  function (x, y, mx, my, tS, ms){
+    const cs = 0.30;
+    const cx = (Math.floor(x/cs) + 0.5)*cs, cy = (Math.floor(y/cs) + 0.5)*cs;
+    const qx = Math.abs(x - cx), qy = Math.abs(y - cy), w = cs*0.40;
+    const frame = 1 - sstep(CW*0.10, CW*0.55, Math.abs(Math.max(qx - w, qy - w)));
+    const corner = (qx > w*0.52 && qy > w*0.52) ? 1 : 0;
+    const near = gauss(cx - mx, cy - my, 11) * ms;
+    const pass = 0.55 + 0.45*Math.sin((cx*1.6 + cy*1.1)*3 - tS*0.45);
+    return [frame*corner*0.85*pass + frame*near*0.95, near];
+  },
+
+  /* 8. Orchestrator : agents wired together, with work travelling the edges.
+     Nodes and edges are sized in whole cells; under a cell they fragment. */
+  function (x, y, mx, my, tS, ms){
+    const N = [[-0.66,0.14],[-0.36,-0.24],[-0.06,0.26],[0.22,-0.20],
+               [0.56,0.16],[0.30,0.34],[-0.48,-0.34]];
+    const E = [[0,1],[1,2],[2,3],[3,4],[1,6],[2,5],[5,4]];
+    const stir = gauss(x - mx, y - my, 5) * ms;
+    const R = CW * 1.7;
+    let v = 0, acc = 0;
+    for (let e = 0; e < E.length; e++){
+      const a = N[E[e][0]], b = N[E[e][1]];
+      const d = sdCap(x, y, a[0], a[1], b[0], b[1], CW*0.30);
+      v = Math.max(v, (1 - sstep(CW*0.28, CW*1.00, Math.abs(d))) * 0.52);
+      if (d < 0) v = Math.max(v, 0.44);
+      /* a packet of work, quicker where the pointer is */
+      const sp = 0.15 + 0.045*(e % 3) + stir*0.55;
+      const u = fr(tS*sp + e*0.37);
+      const pd = Math.hypot(x - (a[0] + (b[0]-a[0])*u), y - (a[1] + (b[1]-a[1])*u));
+      const pk = 1 - sstep(CW*0.55, CW*1.45, pd);
+      if (pk > 0.02){ v = Math.max(v, pk); acc = Math.max(acc, pk*0.9); }
+    }
+    for (const n of N){
+      const dn = Math.hypot(x - n[0], y - n[1]);
+      v = Math.max(v, (1 - sstep(R*0.68, R, dn)) * 0.96);
+      const near = gauss(n[0] - mx, n[1] - my, 9) * ms;
+      if (near > 0.04){
+        v = Math.max(v, (1 - sstep(CW*0.25, CW*0.80, Math.abs(dn - R*1.9))) * near);
+        acc = Math.max(acc, near);
+      }
+    }
+    return [v, acc];
+  }
+];
+
+/* shape helpers shared with the intro creatures */
+function ell(x, y, rx, ry){ return (Math.hypot(x/rx, y/ry) - 1) * Math.min(rx, ry); }
+function ins(d, e){ return 1 - sstep(-e, e, d); }
+function rim(d, w){ return 1 - sstep(w*0.45, w, Math.abs(d)); }
+
+
+/* ------------------------------------------------------------
+   the background surface
+   ------------------------------------------------------------ */
+/* ORIENTATION, NOT JUST BRIGHTNESS.
+   A field that has a direction was being flattened to one number and then looked
+   up in the density ramp, so the character said how dark the cell was and never
+   which way the needle pointed. Two needles 60 degrees apart got the same glyph
+   whenever their coverage matched, and that is what reads as randomly assembled
+   characters.
+
+   The character now carries the angle. Same characters as before, chosen for the
+   shape they draw inside the cell rather than for their weight:
+
+     -  =    a bar across the cell        flat
+     .  :    one dot, two stacked         upright
+     +  *    a crossing, a burst          the diagonals
+
+   Sixty degrees each, so no orientation is favoured. This set has no diagonal
+   stroke, which is its one real limit: put "|", "/" and "\\" in and the same
+   function gives eight true directions instead of three. */
+/* v here is the field's OWN magnitude, 0 to 1, not the faded value.
+   Getting that wrong is what wrecked the definition: the renderer multiplies by
+   calm * 0.66 before drawing, so the number that reached this function topped out
+   at 0.66 and sat far below that over most of the page. Thresholds written for a
+   0..1 range therefore pushed the majority of cells into the "." branch, and a
+   page of single dots is exactly the dust it was supposed to avoid. The fade now
+   decides only whether a cell paints; the character comes from the field. */
+function needle(ang, v){
+  /* Measured: at 0.22 the dot tier took 7% of the ink, at 0.10 it takes 1%. The
+     edge cells belong to the same stroke at the same angle, so giving them the
+     stroke's own character extends the mark instead of fraying it. */
+  if (v < 0.10) return ".";
+  let a = ang % Math.PI;                 /* a needle has no head: fold to 0..PI */
+  if (a < 0) a += Math.PI;
+  const strong = v > 0.70;
+  if (a < 0.5236 || a > 2.6180) return strong ? "=" : "-";
+  if (a > 1.0472 && a < 2.0944) return ":";   /* the one upright this set has */
+  return strong ? "*" : "+";
+}
+
+const Ground = (function(){
+  const ink = document.getElementById("bgInk");
+  const hot = document.getElementById("bgHot");
+  if (!ink || !hot) return { to(){} };
+
+  let modeA = 0, modeB = 0, mixT = 1, mixStart = 0;
+  const MIXMS = 520;
+  let hovering = false, lastMove = -1e9, strength = 0;
+  let mx = -9, my = -9;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const easeIO = u => u < 0.5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3)/2;
+
+  /* This used to clearTimeout and setTimeout a 1400ms idle timer on every
+     pointermove, which on a 125Hz mouse is 250 timer operations a second to
+     answer a question the 10fps tick can answer from a timestamp. */
+  addEventListener("pointermove", e => {
+    const vw = innerWidth, vh = innerHeight;
+    mx = (e.clientX - vw*0.5) / vh;
+    my = -(e.clientY - vh*0.5) / vh;
+    lastMove = e.timeStamp;
+  }, { passive:true });
+
+  function to(m){
+    hovering = m !== 0;
+    if (m === modeA && mixT >= 1) return;
+    if (mixT < 1) modeA = modeB;
+    modeB = m; mixT = 0; mixStart = performance.now();
+  }
+
+  let ratio = 0.6;
+  function measure(){
+    const probe = document.createElement("span");
+    probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:100px " +
+      'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace';
+    probe.textContent = "0";
+    document.body.appendChild(probe);
+    ratio = probe.getBoundingClientRect().width / 100;
+    probe.remove();
+  }
+  /* resize fires many times a second while a window is being dragged, and this
+     probe appends a node and forces a synchronous layout every time it runs.
+     One measurement per frame is all any of them can use. */
+  let mq = false;
+  addEventListener("resize", () => {
+    if (mq) return;
+    mq = true;
+    requestAnimationFrame(() => { mq = false; measure(); });
+  }, { passive:true });
+  measure();
+
+  const t0 = performance.now();
+  let last = 0, rowsA = [], rowsB = [], parity = 0, gridKey = "";
+
+  (function tick(now){
+    requestAnimationFrame(tick);
+    if (now - last < 100) return;                /* 10fps, it is ambient */
+    last = now;
+    /* The loader and the intro are both opaque fullscreen white layers. This
+       grid was being evaluated and written into two full screen <pre> elements
+       behind them, at exactly the moment the intro's own render loop wants the
+       main thread. Nothing behind an opaque layer needs drawing. */
+    const cl = document.documentElement.classList;
+    if (cl.contains("booting") || cl.contains("intro")){ gridKey = ""; return; }
+
+    if (mixT < 1){
+      mixT = Math.min(1, (now - mixStart)/MIXMS);
+      if (mixT >= 1) modeA = modeB;
+    }
+    const target = hovering || (now - lastMove) < 1400 ? 1 : 0;
+    strength += (target - strength) * (reduce ? 1 : 0.10);
+
+    const vw = innerWidth, vh = innerHeight;
+    /* RESOLUTION.
+       This was a flat 126 columns at every width above 640, so the character cell
+       was 10px on a laptop and 20px on a wide display: the field got coarser the
+       bigger the screen, which is the resolution ceiling. It is a target cell
+       size now, so the grain is the same everywhere.
+
+       The ceiling that remains is real work, not an arbitrary number. Measured on
+       this machine the dearest field costs about 1.5us a cell, so a grid is held
+       under BUDGET cells and paid for by interleaving: each tick recomputes every
+       other row and keeps the rest from the tick before. At 10fps the older half
+       is 100ms stale on an ambient texture, which is not visible, and it buys
+       twice the grid for the same work per frame. */
+    const CELL = 7.4;
+    let C = Math.max(84, Math.round(vw / CELL));
+    /* The ceiling is set so a tick never costs more than the old 126 column grid
+       did. That grid evaluated 5418 cells every tick, and twice that mid fade.
+       Interleaved, this one evaluates half its cells per tick, so the same work
+       per frame buys a grid twice as large. */
+    const BUDGET = 10800;
+    let R = Math.max(6, Math.round(vh / ((vw / C) / ratio)));
+    if (C * R > BUDGET){
+      C = Math.max(84, Math.round(C * Math.sqrt(BUDGET / (C * R))));
+      R = Math.max(6, Math.round(vh / ((vw / C) / ratio)));
+    }
+    const cw = vw / C, lh = cw / ratio;
+    const ax = vw / vh;
+    CW = 1 / R;
+    const fs = cw / ratio;
+    for (const L of [ink, hot]){
+      L.style.fontSize = fs + "px";
+      L.style.lineHeight = (vh / R / fs).toFixed(4);
+    }
+
+    const t = (now - t0)/1000;
+    const A = FIELD[modeA], B = FIELD[modeB];
+    const blend = mixT >= 1 ? 0 : easeIO(mixT);
+    /* the idle field keeps its original hard top fade, the project fields
+       get a softer one so they are not erased above the fold */
+    const fadeA = modeA === 0 ? [0.06, 0.74] : [0.62, 1.00];
+    const fadeB = modeB === 0 ? [0.06, 0.74] : [0.62, 1.00];
+
+    /* Only a new grid has to be drawn whole. Forcing a full grid while a mode
+       crossfaded was costing 51ms tasks: during a fade every cell evaluates BOTH
+       fields, so full plus blended is four times the work of a normal tick. The
+       fade interleaves like everything else now. Each row still refreshes every
+       200ms across a 520ms fade, which on an ambient texture at 0.11 opacity is
+       not something you can see. */
+    const key = C + "x" + R;
+    const full = key !== gridKey;
+    if (key !== gridKey){ gridKey = key; rowsA.length = 0; rowsB.length = 0; }
+    rowsA.length = R; rowsB.length = R;
+    parity ^= 1;
+    for (let j = 0; j < R; j++){
+      if (!full && (j & 1) !== parity && rowsA[j] !== undefined) continue;
+      /* shader convention: y spans -0.5 to 0.5, x spans -aspect/2 to aspect/2.
+         Sampling over -1..1 ran every field at half its intended scale. */
+      const sy = -(j/(R - 1) - 0.5);
+      const top = sy + 0.5;
+      const cA = 1 - sstep(fadeA[0], fadeA[1], top);
+      const cB = 1 - sstep(fadeB[0], fadeB[1], top);
+      const calm = cA + (cB - cA)*blend;
+      const a = new Array(C), b = new Array(C);
+      for (let i = 0; i < C; i++){
+        const sx = (i/(C - 1) - 0.5)*ax;
+        let v, acc, ang;
+        const ra = A(sx, sy, mx, my, t, strength, ax);
+        if (blend > 0.001){
+          const rb = B(sx, sy, mx, my, t, strength, ax);
+          v = ra[0] + (rb[0] - ra[0])*blend;
+          acc = ra[1] + (rb[1] - ra[1])*blend;
+          /* an angle cannot be averaged with a field that has none, so it comes
+             from whichever of the two is currently the louder */
+          ang = blend > 0.5 ? rb[2] : ra[2];
+        } else { v = ra[0]; acc = ra[1]; ang = ra[2]; }
+        const raw = v;                 /* the field's own magnitude, before the fade */
+        v *= calm * 0.66;
+        if (v < 0.055){ a[i] = " "; b[i] = " "; continue; }
+        /* a field that reports an angle is drawn by its angle. Every other field
+           is untouched and still reads straight off the density ramp. */
+        const ch = ang === undefined
+          ? RAMP[Math.max(1, Math.min(9, Math.round(v*9)))]
+          : needle(ang, raw);
+        if (acc > 0.30){ b[i] = ch; a[i] = " "; }
+        else { a[i] = ch; b[i] = " "; }
+      }
+      rowsA[j] = a.join(""); rowsB[j] = b.join("");
+    }
+    ink.textContent = rowsA.join("\n");
+    hot.textContent = rowsB.join("\n");
+  })(performance.now());
+
+  return { to };
+})();
+
+
+/* ============================================================
+   3. PREVIEWS
+   The ASCII plate is instant and never fails, so it is what you see
+   first. Linger and the real project boots behind it and takes over.
+   "ascii" plate only, "live" plate then iframe, "off" no panel.
+   ============================================================ */
+const PREVIEW = "live";
+const LINGER  = 900;          /* ms of steady hover before the real thing loads */
+
+const FIELD_NAME = ["contour field","metaballs","line grid","pinscreen",
+                    "gravity wells","flow dashes","fluid","registration marks",
+                    "agent graph"];
+const fieldTag = document.getElementById("fieldTag");
+function useField(n){
+  Ground.to(n);
+  if (fieldTag) fieldTag.textContent = FIELD_NAME[n];
+}
+
+const pretty = u => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
+const index  = document.getElementById("index");
+const touch  = matchMedia("(hover: none)").matches;
+
+
+/* ============================================================
+   4. INDEX ROWS
+   ============================================================ */
+PROJECTS.forEach((p, i) => {
+  const a = document.createElement("a");
+  a.className = "row rise";
+  a.href = p.url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  a.style.setProperty("--d", (340 + i * 55) + "ms");
+  a.dataset.url   = p.url;
+  a.dataset.name  = p.name;
+  a.dataset.field = p.field;
+  a.dataset.thumb = p.thumb || "";
+  if (p.focus != null) a.dataset.focus = p.focus;
+  if (p.focusX != null) a.dataset.focusx = p.focusX;
+  a.dataset.plate = p.plate;
+
+  a.innerHTML = `
+    <span class="glass-t" aria-hidden="true"></span>
+    <span class="glass" aria-hidden="true"></span>
+    <div class="row-in">
+      <div class="side-t">
+        <div class="ep">${p.input}</div>
+        <div class="txt">
+          <h2 class="name">${p.name}</h2>
+          <p class="myth">${p.myth}</p>
+          <p class="desc">${p.desc}</p>
+        </div>
+      </div>
+      <div class="side-r">
+        <div class="meta">
+        <u>${pretty(p.url)}</u>
+        <span>${p.type}</span>
+          <svg class="arrow" viewBox="0 0 22 22" aria-hidden="true">
+            <line x1="4" y1="18" x2="18" y2="4"></line>
+            <polyline points="8,4 18,4 18,14"></polyline>
+          </svg>
+        </div>
+      </div>
+    </div>`;
+
+  index.appendChild(a);
+});
+
+
+/* ============================================================
+   5. HOVER
+   The preview lives inside the row now. One image and one iframe are
+   reused for every row and repositioned by transform, so nothing is
+   reparented and the iframe never reloads on a hover change.
+   ============================================================ */
+if (!touch && PREVIEW !== "off") {
+  const art  = document.getElementById("art");
+  const shot = document.getElementById("artShot");
+  const live = document.getElementById("artLive");
+  let over = null, current = null, bootTimer = null, queued = false;
+  /* the last box written to #art, so a scroll frame that resolves to the same
+     document position does no style work at all */
+  let boxX = NaN, boxY = NaN, boxW = NaN, boxH = NaN;
+  const PAGE_H = 1000;   /* matches the iframe height in the stylesheet */
+  const BEAD = parseFloat(getComputedStyle(document.documentElement)
+                 .getPropertyValue("--bead")) || 48;
+  /* No horizontal aim any more. The iframe is exactly the row's width, so any
+     sideways shift left an empty strip, which is why some rows were blank on
+     the left while image backed rows were not. */
+
+  /* GenAI After Hours fetched a full size PNG cold, on hover, and you watched it
+     arrive in bands. Fetch and decode the picture backed rows while the page is
+     idle, so the first hover shows a finished image. */
+  (function warmThumbs(){
+    const go = () => PROJECTS.forEach(p => {
+      if (!p.thumb) return;
+      const im = new Image();
+      im.decoding = "async";
+      im.src = p.thumb;
+      if (im.decode) im.decode().catch(() => {});
+    });
+    if (window.requestIdleCallback) requestIdleCallback(go, { timeout:4000 });
+    else setTimeout(go, 1800);
+  })();
+
+  shot.addEventListener("load", () => shot.classList.add("ready"));
+  shot.addEventListener("error", () => {
+    const s = shot.getAttribute("src") || "";
+    if (s.indexOf("shots/") > -1 && s.slice(-5) === ".webp"){
+      shot.src = s.slice(0, -5) + ".jpg";                     /* every shot ships both */
+      return;
+    }
+    if (s.indexOf("maxresdefault") > -1){
+      shot.src = s.replace("maxresdefault", "hqdefault");   /* always exists */
+      return;
+    }
+    shot.classList.remove("ready");
+    if (s.indexOf("shots/") === 0){
+      console.warn("Preview image missing: " + s +
+        "  ->  the shots folder has to be deployed next to index.html.");
+    }
+  });
+  live.addEventListener("load", () => {
+    const s = live.getAttribute("src");
+    if (s && s !== "about:blank") live.classList.add("ready");
+  });
+
+  function place(){
+    if (!over || !cached) return;
+    const w = cached.w, hh = cached.h;
+    LENS.l = cached.l; LENS.t = cached.t; LENS.w = w; LENS.h = hh;
+    LENS.tl = cached.tl; LENS.tt = cached.tt;
+    LENS.tw = cached.tw; LENS.th = cached.th;
+    LENS.glassT = cached.tVisible ? cached.tEl : null;
+
+    /* the box is the rectangle, set once per hover. It used to be resized and
+       retranslated on every animation frame, which is what made hovering a row
+       feel choppy even after the rect caching went in.
+
+       Document coordinates: rect + scroll. Both are read in the same frame, so
+       the sum does not change as the page scrolls and the preview cannot drift
+       out of step with the glass in front of it. */
+    const dx = Math.round(cached.l + scrollX), dy = Math.round(cached.t + scrollY);
+    const dw = Math.round(w), dh = Math.round(hh);
+    if (dx !== boxX || dy !== boxY || dw !== boxW || dh !== boxH){
+      boxX = dx; boxY = dy; boxW = dw; boxH = dh;
+      art.style.left   = dx + "px";
+      art.style.top    = dy + "px";
+      art.style.width  = dw + "px";
+      art.style.height = dh + "px";
+    }
+
+    /* the live page is 1280 wide, scaled to the rectangle, then slid so the band
+       named by `focus` lands in the middle of it. Clamped to the page now, so a
+       focus near either end can no longer leave a strip of nothing on show. */
+    const sc = w / 1280;
+    const pageH = 1000 * sc;
+    const f = parseFloat(over.dataset.focus);
+    let y = ((isNaN(f) ? 0.5 : f) * pageH) - hh / 2;
+    y = Math.max(0, Math.min(y, Math.max(0, pageH - hh)));
+    art.style.setProperty("--ls", sc.toFixed(4));
+    art.style.setProperty("--py", (-Math.round(y)) + "px");
+  }
+  addEventListener("scroll", () => {
+    if (over && !queued){
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        cached = measure(over); place();
+      });
+    }
+  }, { passive:true });
+  addEventListener("resize", () => {
+    if (over){ cached = measure(over); place(); }
+  }, { passive:true });
+
+  function paint(url, thumb){
+    if (thumb){
+      live.classList.remove("ready");
+      live.src = "about:blank";
+      if (shot.getAttribute("src") !== thumb){ shot.classList.remove("ready"); shot.src = thumb; }
+      else shot.classList.add("ready");
+      return;
+    }
+    shot.classList.remove("ready");
+    if (live.getAttribute("src") === url){ live.classList.add("ready"); return; }
+    live.classList.remove("ready");
+    clearTimeout(bootTimer);
+    bootTimer = setTimeout(() => { if (current === url) live.src = url; }, 140);
+  }
+
+  /* One cached rect per hover. Reading getBoundingClientRect on pointermove
+     forced a synchronous layout on every pointer event, which is what made
+     highlighting a row choppy. */
+  let cached = null;
+  /* Measure the glass, not the row. The old version rebuilt the glass's inset
+     from --glass-edge in JS, so the preview box and the glass box were two
+     computations of the same thing and drifted whenever either changed. */
+  function measure(rw){
+    const g = rw.querySelector(".glass");
+    const r = (g || rw).getBoundingClientRect();
+    const gt = rw.querySelector(".glass-t");
+    const q = gt ? gt.getBoundingClientRect() : null;
+    /* the text pane is measured the same way and from the same element, so both
+       panes open against their own true box */
+    return { l:r.left, t:r.top, w:Math.max(0, r.width), h:Math.max(0, r.height),
+             tl:q ? q.left : 0, tt:q ? q.top : 0,
+             tw:q ? Math.max(0, q.width) : 0, th:q ? Math.max(0, q.height) : 0,
+             tEl:gt, tVisible:!!(gt && q && q.width > 0) };
+  }
+
+  /* A hovered row changes size while it is hovered. Re-pin on every box change
+     rather than only on scroll and resize. */
+  if (window.ResizeObserver){
+    const ro = new ResizeObserver(() => {
+      if (!over) return;
+      cached = measure(over); place();
+    });
+    document.querySelectorAll(".row").forEach(r => ro.observe(r));
+  }
+  function enter(rw){
+    over = rw;
+    cached = measure(rw);
+    LENS.glass  = rw.querySelector(".glass");
+    LENS.on = true;
+    current = rw.dataset.url;
+    useField(parseInt(rw.dataset.field, 10));
+    place();
+    art.classList.add("on");
+    paint(rw.dataset.url, rw.dataset.thumb);
+  }
+  function leave(rw){
+    if (over !== rw) return;
+    over = null; cached = null;
+    LENS.on = false;              /* the loop shuts the shape, then lets go */
+    art.classList.remove("on");
+    useField(0);
+    clearTimeout(bootTimer);
+  }
+
+  document.querySelectorAll(".row").forEach(row => {
+    row.addEventListener("pointerenter", () => enter(row), { passive:true });
+    row.addEventListener("pointerleave", () => leave(row), { passive:true });
+    row.addEventListener("focus", () => enter(row));
+    row.addEventListener("blur",  () => leave(row));
+    /* There was a pointermove listener here that computed a normalised pointer
+       position and then discarded it: the parallax it fed was removed and the
+       arithmetic stayed. Eight listeners firing on every pointer event for a
+       value nothing read. */
+  });
+
+} else {
+  document.querySelectorAll(".row").forEach(row => {
+    row.addEventListener("pointerenter", () => useField(parseInt(row.dataset.field, 10)));
+    row.addEventListener("pointerleave", () => useField(0));
+    row.addEventListener("focus",        () => useField(parseInt(row.dataset.field, 10)));
+    row.addEventListener("blur",         () => useField(0));
+  });
+}
+
+/* ============================================================
+   6. PROLOGUE
+   One continuous shot, fullscreen, no text.
+
+   Three things make it work:
+   - a global camera (pan and zoom) for moves where everything has
+     to travel together: the descent, and going into the flask
+   - per element offset, scale and rotation for the morphs
+   - painter's order compositing, so things can pass in front of
+     other things instead of dissolving into them
+
+   Every keyframe is evaluated once per frame, not once per cell.
+   At 150 by 51 that is the difference between 25 interpolations
+   and 191,000 of them.
+   ============================================================ */
+(function prologue(){
+
+  /* ============================================================
+     INTRO ON / OFF.  One word.
+     false  the site loads immediately, no intro, no scroll track
+     true   the ASCII intro plays first
+     ============================================================ */
+  const INTRO = true;
+
+  const el   = document.getElementById("prologue");
+  const road = document.getElementById("runway");
+  const skip = document.getElementById("skip");
+  if (!el || !road) return;
+
+  if (!INTRO){
+    el.remove(); road.remove(); if (skip) skip.remove();
+    document.body.classList.add("lit");
+    return;
+  }
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* Only an explicit skip suppresses the intro, and only for this tab session.
+     Watching it through does not. An earlier build persisted forever in
+     localStorage, which meant it silently stopped playing after one view. */
+  const KEY = "mx30-intro-v2";
+  try { localStorage.removeItem("mx30-prologue"); } catch (e) {}
+  const qs = new URLSearchParams(location.search);
+  let seen = false;
+  if (qs.get("intro") === "1"){ try { sessionStorage.removeItem(KEY); } catch (e) {} }
+  else if (qs.get("intro") === "0"){ seen = true; }
+  else { try { seen = sessionStorage.getItem(KEY) === "seen"; } catch (e) {} }
+
+  /* body.lit is what takes every .rise element from opacity 0 to 1, and this
+     branch was the one exit from the prologue that never set it. Skip the intro
+     once and reload in the same tab, or arrive with ?intro=0, and the headline,
+     the subtitle, the legend and all eight rows stayed invisible: the whole page
+     was blank apart from the rail and the footer. Reduced motion happened to be
+     covered by a CSS rule that pins .rise open; the session case was not
+     covered by anything. */
+  if (reduce || seen){
+    el.remove(); road.remove(); if (skip) skip.remove();
+    document.body.classList.add("lit");
+    return;
+  }
+
+  const ink = document.getElementById("layerInk");
+  const hot = document.getElementById("layerHot");
+
+  /* ONE SIGNAL FOR "THE INTRO IS ON SCREEN".
+     The prologue is an opaque fullscreen white layer, so while it is up nothing
+     behind it can be seen. Two other loops need to know that: the merge loop was
+     calling getComputedStyle on this element and reading two properties on every
+     animation frame, which forces a style recalculation sixty times a second for
+     the whole life of the page, and the ASCII ground was rendering a full grid
+     ten times a second behind an opaque overlay. A class on the root element is
+     an O(1) test that forces nothing. */
+  const root = document.documentElement;
+  const showIntro = on => root.classList.toggle("intro", on);
+  showIntro(true);
+
+  function kf(p, s){
+    if (p <= s[0][0]) return s[0][1];
+    for (let i = 1; i < s.length; i++){
+      if (p <= s[i][0]){
+        const a = s[i-1], b = s[i];
+        const u = (p - a[0]) / ((b[0] - a[0]) || 1);
+        return a[1] + (b[1] - a[1]) * (u*u*(3 - 2*u));
+      }
+    }
+    return s[s.length - 1][1];
+  }
+
+  /* ---------------- the shot ----------------
+     Handoffs are annotated with the value both sides must match. */
+  const CH = {
+    /* camera. falls through the clouds, then dives into the flask mouth */
+    camY  : [[0.000,0.95],[0.115,0.00],[1.000,0.00]],
+    camZ  : [[0.000,1.00],[1.000,1.00]],
+
+    cldW  : [[0.000,1],[0.062,1],[0.128,0]],
+    part  : [[0.026,0.00],[0.116,1.30]],
+    stretch:[[0.000,2.40],[0.108,1.00]],
+
+    lotW  : [[0.000,1],[0.222,1],[0.250,0]],
+    lotS  : [[0.000,0.55],[0.100,1.30],[0.190,1.30],[0.248,11.6]],
+    bloom : [[0.062,0.28],[0.196,1.00]],
+
+    /* lotus centre disc 0.085 x 11.3 = 0.96 screen.
+       cyclops iris 0.34 x 2.90 = 0.99 screen. Matched at p 0.242. */
+    eyeW  : [[0.206,0],[0.242,1],[0.386,1],[0.444,0]],
+    eyeS  : [[0.206,2.90],[0.262,2.90],[0.312,0.78],[0.360,0.78],[0.428,0.21]],
+    split : [[0.360,0],[0.428,1]],
+    blink : [[0.312,0],[0.330,1],[0.356,0]],
+
+    pigW  : [[0.402,0],[0.452,1],[0.525,1],[0.570,0]],
+    pigS  : [[0.402,1.20],[0.570,1.20]],
+
+    /* the pig is fully gone by 0.570 and the flask does not arrive until
+       0.712, so the song holds the frame alone for a long stretch */
+    notW  : [[0.530,0],[0.566,1],[0.688,1],[0.718,0]],
+    rise  : [[0.530,0.00],[0.636,1.00]],
+    fall  : [[0.650,0.00],[0.714,1.00]],
+
+    sngW  : [[0.560,0],[0.594,1],[0.702,1],[0.740,0]],
+    sngS  : [[0.560,0.62],[0.612,1.00],[0.706,0.58]],
+    spread: [[0.560,0.10],[0.612,0.56],[0.702,0.06]],
+    sngY  : [[0.560,-0.12],[0.612,0.16],[0.708,-0.16]],
+    flat  : [[0.652,0],[0.706,1]],
+    clip  : [[0.560,2.20],[0.702,0.34]],
+
+    flkW  : [[0.660,0],[0.706,1],[0.822,1],[0.844,0]],
+    flkS  : [[0.660,1.00],[0.774,1.00],[0.800,2.60],[0.826,10.0]],
+    enter : [[0.774,0],[0.814,1]],
+    tilt  : [[0.744,0],[0.800,1.00]],
+    level : [[0.680,-0.42],[0.740,0.04]],
+
+    rftW  : [[0.812,0],[0.832,1],[0.918,1],[0.948,0]],
+    rftS  : [[0.812,1.50],[0.848,1.22],[0.918,1.22],[0.948,0.42]],
+    view  : [[0.840,0],[0.888,1]],
+    flow  : [[0.888,0],[0.922,2.6]],
+
+    thrW  : [[0.912,0],[0.940,1],[1.000,1]],
+    thrS  : [[0.912,0.90],[0.942,1.00],[0.992,9.00]],
+    fire  : [[0.922,0],[0.948,1]],
+
+    dens  : [[0.952,1.00],[0.994,0.10]],
+    fade  : [[0.990,1],[1.000,0]]
+  };
+
+  /* every track resolved once per frame */
+  function params(p, t){
+    const s = {};
+    for (const k in CH) s[k] = kf(p, CH[k]);
+    s.thrY = -0.06 * s.thrS;
+    /* mouth screen y glides 0.845 -> 0 as it grows, so the flask is never
+       shoved below the frame while it is still at normal scale */
+    s.flkY = 0.845 * (1 - s.enter - s.flkS);
+    s.nod  = 0.055 * Math.sin(p * 180);
+    s.look = 0.30 * Math.sin(t * 0.31);
+    s.oink = (p > 0.488 && p < 0.528);
+    s.t = t;
+    return s;
+  }
+
+  /* painter's order. Later calls sit in front of earlier ones. */
+  let V = 0;
+  function lay(fn, w, ox, oy, sc, P, rot){
+    if (w <= 0.004 || sc <= 0.0001) return;
+    let dx = SX - ox, dy = SY - oy;
+    if (rot){
+      const c = Math.cos(rot), si = Math.sin(rot);
+      const nx = dx*c - dy*si; dy = dx*si + dy*c; dx = nx;
+    }
+    COV = 1;
+    const q = fn(dx/sc, dy/sc, P.t, P);
+    const a = w * COV;
+    if (a > 0.002) V = V + (q - V) * a;
+  }
+
+  let SX = 0, SY = 0;
+  function frame(sx, sy, P){
+    SX = sx / P.camZ + 0;
+    SY = sy / P.camZ + P.camY;
+    V = 0;
+
+    lay(CREATURE.lotus,  P.lotW, 0, 0, P.lotS, { open: P.bloom, t: P.t });
+
+    if (P.split < 0.02){
+      lay(CREATURE.eye, P.eyeW, 0, 0, P.eyeS, { blink: P.blink, look: P.look, t: P.t });
+    } else {
+      lay(CREATURE.eye, P.eyeW, -P.split*0.384, P.split*0.216, P.eyeS, { blink: P.blink, look: P.look, t: P.t });
+      lay(CREATURE.eye, P.eyeW,  P.split*0.384, P.split*0.216, P.eyeS, { blink: P.blink, look: P.look, t: P.t });
+    }
+
+    lay(CREATURE.pig, P.pigW, 0, 0, P.pigS, { nod: P.nod, t: P.t });
+
+    lay(CREATURE.raft, P.rftW, 0, 0, P.rftS, { view: P.view, flow: P.flow, t: P.t });
+
+    lay(CREATURE.song, P.sngW, 0, 0, P.sngS,
+        { spread: P.spread, baseY: P.sngY, flat: P.flat, clip: P.clip, t: P.t });
+
+    lay(CREATURE.notes, P.notW, 0, -0.28, 1.0, { rise: P.rise, fall: P.fall, t: P.t });
+
+    lay(CREATURE.bottle, P.flkW, 0, P.flkY, P.flkS, { level: P.level, tilt: P.tilt, t: P.t });
+
+    lay(CREATURE.throne, P.thrW, 0, P.thrY, P.thrS, { fire: P.fire, grain: P.t*0.06, t: P.t });
+
+    lay(CREATURE.clouds, P.cldW, 0, 0, 1.0,
+        { part: P.part, side: -1, stretch: P.stretch, drift: P.t*0.05, t: P.t });
+    lay(CREATURE.clouds, P.cldW, 0, 0, 1.0,
+        { part: P.part, side:  1, stretch: P.stretch, drift: P.t*0.05, t: P.t });
+
+    return V;
+  }
+
+  /* ---------------- grid, fullscreen ---------------- */
+  let ratio = 0.6;
+  let mq = false;
+  /* the runway's height only changes on resize, but the tick was reading
+     road.offsetHeight twenty times a second for the whole life of the page,
+     and every read of offsetHeight forces a synchronous layout */
+  let span = 0;
+  function measure(){
+    const probe = document.createElement("span");
+    probe.style.cssText = "position:absolute;visibility:hidden;white-space:pre;font:100px " +
+      'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace';
+    probe.textContent = "0";
+    document.body.appendChild(probe);
+    ratio = probe.getBoundingClientRect().width / 100;
+    probe.remove();
+  }
+  addEventListener("resize", () => {
+    if (mq) return;
+    mq = true;
+    requestAnimationFrame(() => { mq = false; measure(); span = 0; });
+  }, { passive:true });
+  measure();
+
+  /* finish() lived here: it hid the prologue and optionally persisted the seen
+     flag. Nothing called it. park() and skipOut() are what actually end the
+     intro, and they were written after it. */
+  if (skip) skip.addEventListener("click", skipOut);
+  addEventListener("keydown", e => {
+    if (e.key === "Escape") skipOut();
+  });
+
+  const t0 = performance.now();
+  const GLIDE_AT = 0.925;
+  let lastDraw = 0, gliding = false, landed = false, parked = false, lastP = 0;
+  const rowsA = [], rowsB = [];
+
+  function render(p, now){
+    const vw = innerWidth, vh = innerHeight;
+    const P  = params(p, (now - t0) / 1000);
+
+    const base = vw < 640 ? 70 : 150;
+    const C = Math.max(10, Math.round(base * P.dens));
+    const cw = vw / C, lh = cw / ratio;
+    const R = Math.max(5, Math.round(vh / lh));
+    const ax = vw / vh;
+    const fs = cw / ratio;
+
+    /* A dot drawn at 107px is a dot in a very large empty box. As the grid
+       coarsens the values have to climb the ramp or the climax reads as a
+       blank screen even though every cell is technically occupied. */
+    const boost = 1 + (1 - P.dens) * 1.8;
+
+    for (const L of [ink, hot]){
+      L.style.fontSize = fs + "px";
+      L.style.lineHeight = (vh / R / fs).toFixed(4);
+    }
+
+    rowsA.length = 0; rowsB.length = 0;
+    const oinkRow = Math.round(R * 0.84), oinkCol = Math.round(C * 0.72);
+    for (let j = 0; j < R; j++){
+      const sy = -(j/(R - 1)*2 - 1);
+      const a = new Array(C), b = new Array(C);
+      for (let i = 0; i < C; i++){
+        const v = frame((i/(C - 1)*2 - 1)*ax, sy, P) * boost;
+        if (v >= 0.72){ b[i] = RAMP[Math.round(Math.min(1, v)*9)]; a[i] = " "; }
+        else if (v >= 0.08){ a[i] = RAMP[Math.round(v*9)]; b[i] = " "; }
+        else { a[i] = " "; b[i] = " "; }
+      }
+      if (P.oink && j === oinkRow){
+        const w = "OINK!", x0 = Math.max(0, oinkCol - 2);
+        for (let k = 0; k < w.length && x0 + k < C; k++) b[x0 + k] = w[k];
+      }
+      rowsA.push(a.join("")); rowsB.push(b.join(""));
+    }
+    ink.textContent = rowsA.join("\n");
+    hot.textContent = rowsB.join("\n");
+    return P;
+  }
+
+  /* THE END OF THE INTRO.
+
+     The throne zoom finishes on a timer, not on scroll. Then the runway is
+     deleted from the document outright and the index is put at the top.
+
+     Every previous attempt tried to scroll across the leftover runway
+     correctly. Deleting it means there is no leftover runway to cross, so a
+     blank stretch is not something that can happen. */
+  /* Landing parks the intro rather than deleting it. The runway stays in the
+     document so you can scroll back up through the whole animation; p is
+     measured against the full runway, so p 1.0 is exactly the index seated at
+     the top and there is no dead stretch between them either way. */
+  function land(){
+    if (landed) return;
+    landed = true;
+    gliding = false;              /* or the tick returns at its first line
+                                     forever and never notices you scroll back */
+    scrollTo(0, road.offsetHeight);
+    document.body.classList.add("lit");
+    park();
+  }
+  function park(){
+    parked = true;
+    el.style.visibility = "hidden";
+    el.style.pointerEvents = "none";
+    /* the prologue stays in the document so you can scroll back up into it, but
+       will-change:opacity holds a fullscreen compositing layer for the whole
+       life of the page. Hand it back while it is parked. */
+    el.style.willChange = "auto";
+    showIntro(false);
+    if (skip) skip.style.display = "none";
+  }
+  function unpark(){
+    parked = false; landed = false; gliding = false;
+    el.style.visibility = "";
+    el.style.pointerEvents = "";
+    el.style.willChange = "";
+    showIntro(true);
+    if (skip) skip.style.display = "";
+  }
+  /* skip is a real exit: the intro goes away for this tab */
+  function skipOut(){
+    try { sessionStorage.setItem(KEY, "seen"); } catch (e) {}
+    if (road && road.parentNode) road.remove();
+    if (el && el.parentNode) el.remove();
+    if (skip && skip.parentNode) skip.remove();
+    showIntro(false);
+    scrollTo(0, 0);
+    document.body.classList.add("lit");
+  }
+
+  function glide(){
+    if (gliding) return;
+    gliding = true;
+    if (skip) skip.style.display = "none";
+    const g0 = performance.now(), D = 1500;
+    const ease = u => u < 0.5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3)/2;
+    (function step(now){
+      const u = Math.min(1, (now - g0) / D);
+      render(GLIDE_AT + (1 - GLIDE_AT)*ease(u), now);   /* finish the zoom */
+      el.style.opacity = "1";
+      if (u < 1) requestAnimationFrame(step);
+      else land();
+    })(performance.now());
+  }
+
+  (function tick(now){
+    requestAnimationFrame(tick);
+    if (now - lastDraw < 50) return;
+    lastDraw = now;
+    if (gliding) return;
+    if (!road.parentNode) return;                  /* skipped out entirely */
+
+    /* the full runway, not runway minus viewport: p 1.0 has to coincide with
+       the index seated at the top, or the tail is dead scroll */
+    if (!span) span = road.offsetHeight;
+    const p = span <= 0 ? 1 : Math.max(0, Math.min(1, scrollY / span));
+    const down = p > lastP + 0.0002;
+    lastP = p;
+
+    if (p >= 0.9995){ if (!parked){ document.body.classList.add("lit"); park(); } return; }
+    if (parked && p < 0.985) unpark();
+
+    /* only hand over while travelling forward, or scrolling back up through
+       the tail would drag the reader down again */
+    if (p >= GLIDE_AT && down && !landed){ glide(); return; }
+
+    const P = render(p, now);
+    el.style.opacity = String(P.fade);
+  })(performance.now());
+})();
+
+/* ============================================================
+   7. CURSOR
+   A plain glass bead. One element, one backdrop-filter, no mask and
+   no filter on it. The metaball version stacked mask, backdrop-filter
+   and drop-shadow on a single composited layer, which tore on the GPU
+   and took the cursor with it when it failed.
+   ============================================================ */
+(function cursor(){
+  if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  const dot = document.getElementById("cur");
+  if (!dot) return;
+  const bead = dot.firstElementChild;
+  document.documentElement.classList.add("dot");
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let tx = innerWidth / 2, ty = innerHeight / 2, cx = tx, cy = ty, seeded = false;
+  const art = document.getElementById("art");
+  const clipEl = document.getElementById("artClip");
+
+  addEventListener("pointermove", e => {
+    tx = e.clientX; ty = e.clientY;
+    if (!seeded){ cx = tx; cy = ty; seeded = true; dot.classList.add("live"); }
+  }, { passive:true });
+  addEventListener("pointerdown", () => {
+    dot.classList.remove("tap");
+    void dot.offsetWidth;          /* restart, or a second click is ignored */
+    dot.classList.add("tap");
+  }, { passive:true });
+  if (bead) bead.addEventListener("animationend", () => dot.classList.remove("tap"));
+  addEventListener("pointerleave", () => dot.classList.remove("live"), { passive:true });
+  addEventListener("pointerenter", () => { if (seeded) dot.classList.add("live"); }, { passive:true });
+
+  /* ONE CLOCK.
+     Where the bead is, how open the rectangle is, and what shape the preview is
+     cut to are all decided here, in the same frame, from the same numbers.
+     Nothing in this system has a CSS transition on a size any more, which is
+     what used to let one of them arrive before the others. */
+  let m = 0;                 /* 0 a bead at the pointer, 1 the whole rectangle */
+  let held = null;           /* kept through the close so the shape can shut */
+  let heldT = null;          /* the text pane, closed the same way */
+  /* --bead is a clamp(), and getPropertyValue on an unregistered custom
+     property returns the token text, not a resolved length, so parseFloat on it
+     is NaN. Measure the element: it is the one number that is always true. */
+  let beadPx = dot.offsetWidth || 48;
+  let radPx  = 18;
+  function remeasure(){
+    beadPx = dot.offsetWidth || 48;
+    const r = parseFloat(getComputedStyle(document.documentElement)
+                .getPropertyValue("--glass-radius"));
+    radPx = isFinite(r) ? r : 18;
+  }
+  remeasure();
+  addEventListener("resize", remeasure, { passive:true });
+
+  (function loop(){
+    requestAnimationFrame(loop);
+    const k = reduce ? 1 : 0.24;
+    cx += (tx - cx) * k;
+    cy += (ty - cy) * k;
+    dot.style.transform = "translate3d(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px,0)";
+
+    if (LENS.on && held !== LENS.glass){
+      if (held)  held.style.clipPath = "";     /* release the row we came from */
+      if (heldT) heldT.style.clipPath = "";
+      held = LENS.glass; heldT = LENS.glassT;
+    }
+    m += ((LENS.on ? 1 : 0) - m) * (reduce ? 1 : 0.19);
+    if (!LENS.on && m < 0.003){
+      m = 0;
+      if (held){ held.style.clipPath = ""; held = null; }
+      if (heldT){ heldT.style.clipPath = ""; heldT = null; }
+      if (clipEl) clipEl.style.clipPath = "";
+    }
+    dot.classList.toggle("merged", m > 0.5);
+
+    if (m > 0 && LENS.w > 0){
+      /* THE SHAPE.
+         One rounded rectangle interpolated from a bead sized square at the
+         pointer out to the full row rectangle, in the rectangle's own
+         coordinates. It goes to the row's glass and to the preview's clip in the
+         same frame from the same numbers, so a leak is not something that gets
+         clipped away afterwards, it is something the geometry cannot express. */
+      const bead = beadPx;
+      const hb = bead / 2;
+      const e = m < 0.5 ? 4*m*m*m : 1 - Math.pow(-2*m + 2, 3) / 2;   /* in out cubic */
+
+      /* One shape, expressed in whichever pane's coordinates it is asked for.
+         Both panes therefore open from the same bead, at the same rate, on the
+         same frame, and the preview's clip is the preview pane's own string. */
+      function shapeFor(px, py, W, H){
+        const bx = Math.max(0, Math.min(cx - px - hb, Math.max(0, W - bead)));
+        const by = Math.max(0, Math.min(cy - py - hb, Math.max(0, H - bead)));
+        const L = bx * (1 - e), T = by * (1 - e);
+        const w2 = bead + (W - bead) * e;
+        const h2 = bead + (H - bead) * e;
+        const rr = hb + (radPx - hb) * e;
+        return "inset(" + T.toFixed(1) + "px " +
+               Math.max(0, W - L - w2).toFixed(1) + "px " +
+               Math.max(0, H - T - h2).toFixed(1) + "px " +
+               L.toFixed(1) + "px round " + rr.toFixed(1) + "px)";
+      }
+
+      const shape = shapeFor(LENS.l, LENS.t, LENS.w, LENS.h);
+      if (held)   held.style.clipPath = shape;
+      if (clipEl) clipEl.style.clipPath = shape;
+      if (heldT && LENS.tw > 0)
+        heldT.style.clipPath = shapeFor(LENS.tl, LENS.tt, LENS.tw, LENS.th);
+    }
+  })();
+})();
+
+/* ============================================================
+   11. RAIL MORPH
+   Full bleed at the top of the index, a floating capsule once you
+   are into the projects.
+   ============================================================ */
+(function railMorph(){
+  const rail = document.getElementById("rail");
+  if (!rail) return;
+  let on = false, queued = false, base = -1;
+  /* getElementById plus offsetHeight ran on every scroll frame. The runway is
+     1450vh, so its height only changes when the viewport does: measure it once
+     and again on resize, and the scroll path stops forcing layout. */
+  function check(){
+    queued = false;
+    const road = document.getElementById("runway");
+    /* getElementById is a hash lookup; offsetHeight is what forces layout, so
+       only that is cached. Skipping the intro removes the runway outright, and
+       this still reads 0 the frame after it goes. */
+    if (!road) base = 0;
+    else if (base < 0) base = road.offsetHeight;
+    /* measured from the top of the index, not the document, so the intro's
+       scroll track cannot put it in the tight state before you arrive */
+    const want = (scrollY - base) > 90;
+    if (want !== on){ on = want; rail.classList.toggle("tight", on); }
+  }
+  addEventListener("scroll", () => {
+    if (!queued){ queued = true; requestAnimationFrame(check); }
+  }, { passive:true });
+  addEventListener("resize", () => { base = -1; check(); }, { passive:true });
+  check();
+})();
+
+/* ============================================================
+   8. DEV PANEL
+   Type ddsd to show or hide. Everything the glass does is a CSS
+   variable or a filter attribute, so it is all live here rather
+   than a round trip through me.
+   ============================================================ */
+(function dev(){
+  const panel = document.getElementById("dev");
+  const rows  = document.getElementById("devRows");
+  if (!panel || !rows) return;
+
+  const S = [
+    { k:"radius",  label:"Roundness",   min:0,   max:36,  step:1,    def:18,   unit:"px", css:"--glass-radius" },
+    { k:"edge",    label:"Inset",       min:0,   max:40,  step:1,    def:14,   unit:"px", css:"--glass-edge" },
+    { k:"refract", label:"Refraction",  min:0,   max:120, step:1,    def:100,  unit:"",   filt:1 },
+    { k:"chroma",  label:"Chromatic",   min:0,   max:48,  step:1,    def:6,    unit:"",   filt:1 },
+    { k:"blur",    label:"Frost",       min:0,   max:18,  step:0.5,  def:0,    unit:"px", css:"--glass-blur" },
+    { k:"sat",     label:"Saturation",  min:100, max:280, step:5,    def:125,  unit:"%",  css:"--glass-sat" },
+    { k:"bright",  label:"Brightness",  min:0.85,max:1.30,step:0.01, def:1.00, unit:"",   css:"--glass-bright" },
+    { k:"tint",    label:"Tint",        min:0,   max:1,   step:0.02, def:0.40, unit:"",   css:"--glass-tint" },
+    { k:"spec",    label:"Edge light",  min:0,   max:1,   step:0.02, def:0.90, unit:"",   css:"--glass-spec" },
+    { k:"shadow",  label:"Shadow",      min:0,   max:0.4, step:0.01, def:0.10, unit:"",   css:"--glass-shadow" }
+  ];
+  const val = {};
+
+  let flip = false;
+  function apply(s){
+    if (s.css){ document.documentElement.style.setProperty(s.css, val[s.k] + s.unit); return; }
+    if (!s.filt) return;
+    const R = document.getElementById("dR"), G = document.getElementById("dG"), B = document.getElementById("dB");
+    const f = document.getElementById(flip ? "gcB" : "gcA");
+    if (!R || !G || !B || !f) return;
+    const base = Number(val.refract), d = Number(val.chroma);
+    if (!isFinite(base) || !isFinite(d)) return;   /* sliders are still building */
+    R.setAttribute("scale", base + d);
+    G.setAttribute("scale", base);
+    B.setAttribute("scale", Math.max(0, base - d));
+    /* Chrome resolves a backdrop-filter url() once and ignores later edits to
+       that filter. Renaming it and repointing the reference forces a fresh
+       resolve, which is the only thing that makes this slider live. */
+    flip = !flip;
+    const id = flip ? "gcB" : "gcA";
+    f.setAttribute("id", id);
+    document.documentElement.style.setProperty("--glass-filter", "url(#" + id + ")");
+  }
+
+  S.forEach(s => {
+    val[s.k] = s.def;
+    const wrap = document.createElement("label");
+    wrap.innerHTML = '<span class="r"><span>' + s.label + '</span><b id="v_' + s.k + '">' +
+      s.def + s.unit + '</b></span>';
+    const inp = document.createElement("input");
+    inp.type = "range"; inp.min = s.min; inp.max = s.max; inp.step = s.step; inp.value = s.def;
+    inp.addEventListener("input", () => {
+      val[s.k] = parseFloat(inp.value);
+      document.getElementById("v_" + s.k).textContent = val[s.k] + s.unit;
+      apply(s);
+    });
+    wrap.appendChild(inp);
+    rows.appendChild(wrap);
+    wrap._inp = inp; s._el = wrap;
+    apply(s);
+  });
+
+  document.getElementById("devReset").addEventListener("click", () => {
+    S.forEach(s => {
+      val[s.k] = s.def; s._el._inp.value = s.def;
+      document.getElementById("v_" + s.k).textContent = s.def + s.unit;
+      apply(s);
+    });
+  });
+  document.getElementById("devCopy").addEventListener("click", () => {
+    const css = ":root{\n" + S.filter(s => s.css)
+      .map(s => "  " + s.css + ": " + val[s.k] + s.unit + ";").join("\n") +
+      "\n}\n/* feDisplacementMap scale R " + (val.refract + val.chroma) +
+      " G " + val.refract + " B " + Math.max(0, val.refract - val.chroma) + " */";
+    navigator.clipboard && navigator.clipboard.writeText(css);
+    const b = document.getElementById("devCopy");
+    const was = b.textContent; b.textContent = "Copied";
+    setTimeout(() => { b.textContent = was; }, 1200);
+  });
+
+  /* the knock */
+  let buf = "";
+  addEventListener("keydown", e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
+    buf = (buf + e.key.toLowerCase()).slice(-4);
+    if (buf === "ddsd"){ panel.classList.toggle("on"); buf = ""; }
+  });
+})();
+
+/* the accent sits on one word and stays there. It was cycling every 1.7s,
+   which is constant motion competing with everything else on the page. */
+document.querySelector("h1 em.cyc")?.classList.add("lit-word");
+
+document.getElementById("replay")?.addEventListener("click", () => {
+  try { sessionStorage.removeItem("mx30-intro-v2"); } catch (e) {}
+  location.href = location.pathname + "?intro=1";
+});
+
+/* ============================================================
+   12. THE MERGE
+   One signed distance field, rectangle smooth unioned with the cursor, exactly
+   the contract in the spec: field() returns the signed distance to the MERGED
+   silhouette, and uK is the only thing that makes them merge.
+
+   Targets: the navigation bar, the row's left text pane and right preview
+   pane, the Reach out capsule and the Replay button.
+
+   WHY IT IS BUILT THIS WAY. The glass here is CSS, not a shader: a tint
+   gradient, a backdrop-filter carrying the lens, and two inset edge lights.
+   An element cannot paint outside its own box, so the neck and the bead cannot
+   come from the target, and the target cannot be replaced because it is
+   carrying its own text. So the merged body is drawn as the target (untouched)
+   plus one bridge layer holding the merged silhouette MINUS the target's
+   rectangle. Subtracting is what matters: no pixel ever gets two
+   backdrop-filters, so the neck cannot read as a second, denser object.
+
+   The bridge declares no material at all. It reads the target's own computed
+   background and backdrop-filter every frame and copies them, so the glass is
+   still defined in exactly one place, on the objects, and the dev panel keeps
+   driving all of it.
+
+   Two consequences worth knowing. The bridge's box is the tight bounding box
+   of the blob, which is what keeps the lens correct: the filter region scales
+   with the silhouette the same way it does for the 48px bead in its own 48px
+   box. And the bead hands over to the bridge while they are still identical
+   circles, at gap 64, so the handoff has nothing to see.
+   ============================================================ */
+(function merge(){
+  if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const dot   = document.getElementById("cur");
+  const fill  = document.getElementById("mgFill");
+  const rimS  = document.getElementById("mgRim");
+  const rimP  = document.getElementById("mgRimPath");
+  const clipP = document.getElementById("mgClipPath");
+  const grad  = document.getElementById("mgGrad");
+  const gA    = document.getElementById("mgA");
+  const gB    = document.getElementById("mgB");
+  const rimL  = document.getElementById("mgRimLit");
+  if (!dot || !fill || !rimS || !rimP || !clipP) return;
+  const nib = dot.firstElementChild;
+
+  /* ---- THE DRIVER ---- */
+  const BEAD  = 48;    /* cursor diameter at rest */
+  const IN    = 64;    /* gap at which merging begins, px, edge to edge */
+  const OUT   = 92;    /* and at which it lets go. Later than it took hold, so a
+                          pointer resting on the threshold cannot flicker the
+                          bridge on and off frame to frame. */
+  const KREF  = 52;    /* smooth union radius at contact for a bead at rest */
+  const PRESS = 1.5;   /* press scale, cursor only */
+  const PULL  = 7;     /* how far the target's own edge leans out to meet the
+                          bead before they touch. Anticipation is the whole
+                          difference between mercury and a union operator. */
+  const EAT   = 0.17;  /* how much of the bead the target takes as it swallows
+                          it, so the merged body does not visibly gain mass */
+  /* The bridge no longer tucks 2.2px under the target to hide its edge light,
+     because two backdrop-filters on the same pixel is what drew the dark wedge
+     across the neck. The target's light is cut instead, and this is only the
+     sub-pixel overlap that stops two antialiased edges leaving a hairline. */
+  const TUCK  = 0.75;
+  const CUTK  = 0.95;  /* mouth radius as a share of the smoothing radius */
+
+  let bs = 1, bv = 0, tgt = 1;                    /* press scale, velocity, target */
+  let engaged = false;                            /* inside the hysteresis band */
+  let kS = 0;                                     /* the live smoothing radius */
+
+  /* ---- THE MOUTH IN THE TARGET'S OWN EDGE LIGHT ----
+     One custom property on the target. The cut is a disc at the pointer with a
+     soft shoulder, so over-reaching fades out instead of ending on a line. */
+  let cutEl = null;
+  function setCut(el, x, y, r){
+    if (cutEl && cutEl !== el) cutEl.style.removeProperty("--rim-cut");
+    cutEl = el;
+    el.style.setProperty("--rim-cut",
+      "radial-gradient(ellipse " + r.toFixed(1) + "px " + r.toFixed(1) + "px at " +
+      x.toFixed(1) + "px " + y.toFixed(1) + "px," +
+      "rgba(0,0,0,0) 0%,rgba(0,0,0,0) 72%,#000 100%)");
+  }
+  function clearCut(){
+    if (cutEl){ cutEl.style.removeProperty("--rim-cut"); cutEl = null; }
+  }
+  addEventListener("pointerdown",   () => { tgt = PRESS; }, { passive:true });
+  addEventListener("pointerup",     () => { tgt = 1; },     { passive:true });
+  addEventListener("pointercancel", () => { tgt = 1; },     { passive:true });
+
+  /* ---- THE FIELD ---- */
+  function sdRR(px, py, cx, cy, hx, hy, r){
+    const qx = Math.abs(px - cx) - hx + r, qy = Math.abs(py - cy) - hy + r;
+    return Math.min(Math.max(qx, qy), 0) + Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - r;
+  }
+
+  /* ---- CONTOUR. Marching squares on integer edge keys, so the mesh is
+         watertight, with the interior on the LEFT of travel, which makes outer
+         rings and holes wind opposite ways and lets nonzero fill handle both. */
+  let S = new Float64Array(0), pxA = new Float64Array(0), pyA = new Float64Array(0),
+      hasA = new Uint8Array(0), seenA = new Uint8Array(0);
+  function march(g, x0, y0, cell, nx, ny){
+    const W = nx + 1, NS = W * (ny + 1);
+    if (S.length < NS) S = new Float64Array(NS);
+    for (let j = 0; j <= ny; j++){
+      const edge = (j === 0 || j === ny);
+      for (let i = 0; i <= nx; i++){
+        let v = g(x0 + i * cell, y0 + j * cell);
+        if (edge || i === 0 || i === nx) v = Math.max(v, 0.5);   /* frame is outside */
+        S[j * W + i] = v;
+      }
+    }
+    const HN = nx * (ny + 1), N = HN + W * ny;
+    if (pxA.length < N){
+      pxA = new Float64Array(N); pyA = new Float64Array(N);
+      hasA = new Uint8Array(N);  seenA = new Uint8Array(N);
+    } else { hasA.fill(0, 0, N); seenA.fill(0, 0, N); }
+
+    function cH(i, j){
+      const k = j * nx + i;
+      if (!hasA[k]){
+        const a = S[j * W + i], b = S[j * W + i + 1];
+        pxA[k] = x0 + (i + a / (a - b)) * cell; pyA[k] = y0 + j * cell; hasA[k] = 1;
+      }
+      return k;
+    }
+    function cV(i, j){
+      const k = HN + j * W + i;
+      if (!hasA[k]){
+        const a = S[j * W + i], b = S[(j + 1) * W + i];
+        pxA[k] = x0 + i * cell; pyA[k] = y0 + (j + a / (a - b)) * cell; hasA[k] = 1;
+      }
+      return k;
+    }
+
+    const from = new Map();
+    for (let j = 0; j < ny; j++){
+      for (let i = 0; i < nx; i++){
+        const a = S[j * W + i], b = S[j * W + i + 1],
+              c = S[(j + 1) * W + i + 1], d = S[(j + 1) * W + i];
+        const code = (a < 0 ? 1 : 0) | (b < 0 ? 2 : 0) | (c < 0 ? 4 : 0) | (d < 0 ? 8 : 0);
+        if (code === 0 || code === 15) continue;
+        switch (code){
+          case  1: from.set(cV(i,j),   cH(i,j));   break;
+          case  2: from.set(cH(i,j),   cV(i+1,j)); break;
+          case  3: from.set(cV(i,j),   cV(i+1,j)); break;
+          case  4: from.set(cV(i+1,j), cH(i,j+1)); break;
+          case  6: from.set(cH(i,j),   cH(i,j+1)); break;
+          case  7: from.set(cV(i,j),   cH(i,j+1)); break;
+          case  8: from.set(cH(i,j+1), cV(i,j));   break;
+          case  9: from.set(cH(i,j+1), cH(i,j));   break;
+          case 11: from.set(cH(i,j+1), cV(i+1,j)); break;
+          case 12: from.set(cV(i+1,j), cV(i,j));   break;
+          case 13: from.set(cV(i+1,j), cH(i,j));   break;
+          case 14: from.set(cH(i,j),   cV(i,j));   break;
+          case  5:                                  /* saddle, read the centre */
+            if ((a+b+c+d) < 0){ from.set(cV(i+1,j), cH(i,j)); from.set(cV(i,j),   cH(i,j+1)); }
+            else              { from.set(cV(i,j),   cH(i,j)); from.set(cV(i+1,j), cH(i,j+1)); }
+            break;
+          case 10:
+            if ((a+b+c+d) < 0){ from.set(cH(i,j), cV(i,j));   from.set(cH(i,j+1), cV(i+1,j)); }
+            else              { from.set(cH(i,j), cV(i+1,j)); from.set(cH(i,j+1), cV(i,j));   }
+            break;
+        }
+      }
+    }
+
+    const rings = [];
+    for (const start of from.keys()){
+      if (seenA[start]) continue;
+      const xs = [], ys = [];
+      let k = start, guard = 0;
+      while (k !== undefined && !seenA[k] && guard++ < 60000){
+        seenA[k] = 1; xs.push(pxA[k]); ys.push(pyA[k]); k = from.get(k);
+      }
+      if (xs.length >= 3) rings.push({ xs, ys });
+    }
+    return rings;
+  }
+
+  const q = v => Math.round(v * 10) / 10;
+
+  /* ---- CANDIDATES. Re-read on a slow tick: these are the only glass objects
+         the cursor is allowed to become part of. */
+  let cand = [], tick = 0, spec = 0.9;
+
+  function paneOpen(cp){
+    if (!cp || cp === "none") return true;
+    const i = cp.indexOf("inset(");
+    if (i < 0) return true;
+    const r = cp.indexOf("round");
+    const nums = cp.slice(i + 6, r > i ? r : cp.length).match(/-?[\d.]+/g);
+    if (!nums) return true;
+    for (let k = 0; k < nums.length; k++) if (Math.abs(parseFloat(nums[k])) > 1.5) return false;
+    return true;
+  }
+
+  function refresh(){
+    cand.length = 0;
+    const add = (el, isPane) => {
+      if (!el) return;
+      const cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") return;
+      if (parseFloat(cs.opacity) < 0.92) return;
+      if (isPane && !paneOpen(cs.clipPath)) return;   /* still opening, leave it alone */
+      let bf = cs.backdropFilter;
+      if (!bf || bf === "none") bf = cs.webkitBackdropFilter;
+      if (!bf || bf === "none") bf = "";
+      const rad = parseFloat(cs.borderTopLeftRadius);
+      /* backgroundImage alone was not the material. Reach out carries its blue
+         as a gradient but the pills and the rail can carry a colour underneath
+         it, and a bridge that copied only the image showed the page through
+         where the target showed paint. */
+      cand.push({ el, rad: isFinite(rad) ? rad : 0,
+                  bg: cs.backgroundImage, bgc: cs.backgroundColor, bf });
+    };
+    add(document.querySelector("#rail .rail-in"));      /* the navigation bar */
+    add(document.querySelector(".foot .gpill-blue"));   /* Reach out */
+    add(document.getElementById("replay"));             /* Replay the intro */
+    if (LENS.on){ add(LENS.glass, true); add(LENS.glassT, true); }  /* the two panes */
+  }
+
+  /* ---- HANDOFF. The bridge draws the bead from the moment a target is in
+         range, so the real bead has to go, instantly: a fade would put two
+         beads on the same pixels for 160ms. */
+  let hid = false;
+  function setBead(h){
+    if (h === hid || !nib) return;
+    hid = h;
+    if (h){ nib.style.transition = "none"; nib.style.opacity = "0"; }
+    else {
+      nib.style.opacity = "";
+      requestAnimationFrame(() => { if (!hid) nib.style.transition = ""; });
+    }
+  }
+
+  let shown = false, lastMat = "";
+  function hide(){ if (shown){ shown = false; fill.style.display = "none"; rimS.style.display = "none"; } }
+  function off(){ setBead(false); hide(); clearCut(); engaged = false; kS = 0; }
+
+  (function loop(){
+    requestAnimationFrame(loop);
+
+    /* press spring, as specified */
+    bv += (tgt - bs) * 0.16;  bv *= 0.72;  bs += bv;
+    if (Math.abs(tgt - bs) < 5e-4 && Math.abs(bv) < 5e-4){ bs = tgt; bv = 0; }
+
+    if (!dot.classList.contains("live")) return off();
+    if (document.documentElement.classList.contains("booting")) return off();
+    /* the intro is an opaque fullscreen layer, so nothing can merge behind it.
+       This used to be a getComputedStyle plus two property reads, every frame. */
+    if (document.documentElement.classList.contains("intro")) return off();
+
+    if (!(tick++ % 6)){
+      refresh();
+      const sp = parseFloat(getComputedStyle(document.documentElement)
+                   .getPropertyValue("--glass-spec"));
+      spec = isFinite(sp) ? sp : 0.9;
+    }
+    if (!cand.length) return off();
+
+    /* the bead's own box is the one true reading of the eased pointer */
+    const db = dot.getBoundingClientRect();
+    const cx = db.left + db.width / 2, cy = db.top + db.height / 2;
+    const R0 = BEAD * bs / 2;                /* the bead's own radius */
+
+    /* gap is edge to edge: nearest point on the rectangle, then subtract R */
+    let T = null, box = null, gap = Infinity;
+    for (let i = 0; i < cand.length; i++){
+      const c = cand[i], r = c.el.getBoundingClientRect();
+      if (r.width < 6 || r.height < 6) continue;
+      if (r.bottom < -80 || r.top > innerHeight + 80) continue;
+      const nx = Math.max(r.left, Math.min(cx, r.right));
+      const ny = Math.max(r.top,  Math.min(cy, r.bottom));
+      const g = Math.hypot(cx - nx, cy - ny) - R0;
+      if (g < gap){ gap = g; T = c; box = r; }
+    }
+    /* Hysteresis. IN takes hold, OUT lets go, and closeness is always measured
+       against IN so nothing pops at the moment the bridge appears: at the
+       engaging distance t is exactly 0 and the shapes are still two circles. */
+    if (!T || gap >= (engaged ? OUT : IN)) return off();
+    engaged = true;
+
+    const t = Math.max(0, Math.min(1, 1 - gap / IN));   /* closeness, 0 to 1 */
+
+    /* The smoothing radius scales with the bead rather than sitting at a fixed
+       52px, so pressing fattens the neck instead of leaving it the same width
+       around a bigger body. It also rises faster than it falls, which is what
+       makes the neck stretch thin and break late on the way out. */
+    const kWant = (KREF / (BEAD / 2)) * R0 * t;
+    kS += (kWant - kS) * (kWant > kS ? 0.34 : 0.11);
+    const K = kS;
+
+    /* the target swallows part of the bead as it absorbs it, so the merged body
+       does not read as the panel plus a marble stuck to it */
+    const R = R0 * (1 - EAT * t);
+
+    const rcx = (box.left + box.right) / 2, rcy = (box.top + box.bottom) / 2;
+    const rhx = box.width / 2, rhy = box.height / 2;
+    const rad = Math.min(T.rad, Math.min(rhx, rhy));
+
+    const fRect = (x, y) => sdRR(x, y, rcx, rcy, rhx, rhy, rad);
+    const m0 = R + K * 0.55, md = (R + K * 1.15 + 6) - m0;
+    function mouth(x, y){
+      const u0 = (Math.hypot(x - cx, y - cy) - m0) / md;
+      const u = u0 < 0 ? 0 : u0 > 1 ? 1 : u0;
+      return 1 - u * u * (3 - 2 * u);
+    }
+    /* ANTICIPATION. The silhouette's rectangle leans out toward the bead before
+       contact, falling off with distance. Only the SILHOUETTE bulges: the
+       subtraction below still uses the true rectangle, because the target paints
+       its true rectangle and the bridge has to own everything outside it. */
+    const bulge = PULL * t * t * t;
+    const fRectS = bulge < 0.02 ? fRect
+                 : (x, y) => fRect(x, y) - bulge * mouth(x, y);
+
+    /* field(): the signed distance to the MERGED silhouette */
+    function fld(x, y){
+      const a = fRectS(x, y);
+      const b = Math.hypot(x - cx, y - cy) - R;
+      if (R < 0.01) return a;                            /* no cursor present */
+      if (K <= 0.001) return Math.min(a, b);             /* hard union */
+      const h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / K));
+      return (b + (a - b) * h) - K * h * (1 - h);        /* polynomial smooth min */
+    }
+    /* what the bridge owns: the merged body, minus the target's own rectangle */
+    const G    = (x, y) => Math.max(fld(x, y), -(fRect(x, y) + TUCK * mouth(x, y)));
+    const seam = (x, y) => (fRect(x, y) + TUCK * mouth(x, y)) < 0.9;
+
+    const reach = R + Math.max(0, gap) + K + bulge + 16;
+    const cell  = Math.max(2.6, reach / 24);
+    const n     = Math.ceil(2 * reach / cell) + 2;
+    const rings = march(G, cx - reach - cell, cy - reach - cell, cell, n, n);
+
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < rings.length; i++){
+      const xs = rings[i].xs, ys = rings[i].ys;
+      for (let j = 0; j < xs.length; j++){
+        if (xs[j] < x0) x0 = xs[j];
+        if (xs[j] > x1) x1 = xs[j];
+        if (ys[j] < y0) y0 = ys[j];
+        if (ys[j] > y1) y1 = ys[j];
+      }
+    }
+    /* nothing outside the target means the cursor has been absorbed: the
+       target alone IS the merged body, which is the gap <= 0 end of the spec */
+    if (!isFinite(x0)){ setBead(true); hide(); clearCut(); return; }
+
+    /* the box is the TIGHT bounding box of the blob, and that is what keeps the
+       lens honest: the filter region scales with the silhouette exactly as it
+       does for the 48px bead in its own 48px box. 1px of pad, only so the rim
+       stroke is not clipped by the edge. */
+    const ox = x0 - 1, oy = y0 - 1, W = (x1 - x0) + 2, H = (y1 - y0) + 2;
+
+    /* ---- one pass, two strings. The rim reuses the fill's exact curves so the
+           light sits on the silhouette, and breaks wherever the outline is the
+           seam against the target, which is what opens the mouth. ---- */
+    let dF = "", dR = "", dL = "", lo = Infinity, hi = -Infinity, drawn = 0;
+    for (let ri = 0; ri < rings.length; ri++){
+      const xs = rings[ri].xs, ys = rings[ri].ys, len = xs.length;
+      if (len < 3) continue;
+      let area = 0;
+      for (let i = 0; i < len; i++){
+        const j = (i + 1) % len;
+        area += xs[i] * ys[j] - xs[j] * ys[i];
+      }
+      if (Math.abs(area / 2) < 6) continue;
+      let clean = 0;
+      const sm = [];
+      for (let i = 0; i < len; i++){ sm[i] = seam(xs[i], ys[i]) ? 1 : 0; if (!sm[i]) clean++; }
+      if (!clean) continue;
+
+      const X = i => xs[(i % len + len) % len] - ox, Y = i => ys[(i % len + len) % len] - oy;
+      const mx = i => (X(i) + X(i + 1)) / 2, my = i => (Y(i) + Y(i + 1)) / 2;
+
+      dF += "M" + q(mx(-1)) + " " + q(my(-1));
+      for (let i = 0; i < len; i++){
+        if (sm[i]) dF += "L" + q(X(i)) + " " + q(Y(i)) + "L" + q(mx(i)) + " " + q(my(i));
+        else       dF += "Q" + q(X(i)) + " " + q(Y(i)) + " " + q(mx(i)) + " " + q(my(i));
+      }
+      dF += "Z";
+
+      /* THE LIGHT, off the contour's own normal rather than off a position ramp.
+         The rings wind with the interior on the LEFT of travel, so the outward
+         normal of the chord (dx,dy) is (-dy,dx) and a segment faces the light
+         when that normal points up the screen. Segments belong to one stroke or
+         the other, never both, so the two never sum on the same pixel. */
+      let openR = false, openL = false;
+      for (let i = 0; i < len; i++){
+        if (sm[i]){ openR = openL = false; continue; }
+        const ax = mx(i - 1), ay = my(i - 1), bx = mx(i), by = my(i);
+        const sx = bx - ax, sy = by - ay;
+        const sl = Math.hypot(sx, sy) || 1;
+        const seg = "Q" + q(X(i)) + " " + q(Y(i)) + " " + q(bx) + " " + q(by);
+        if (-sx / sl > 0.22){                              /* normal faces up */
+          if (!openL){ dL += "M" + q(ax) + " " + q(ay); openL = true; }
+          dL += seg; openR = false;
+        } else {
+          if (!openR){ dR += "M" + q(ax) + " " + q(ay); openR = true; }
+          dR += seg; openL = false;
+        }
+      }
+
+      for (let i = 0; i < len; i++){
+        if (ys[i] < lo) lo = ys[i];
+        if (ys[i] > hi) hi = ys[i];
+      }
+      drawn++;
+    }
+    if (!drawn){ setBead(true); hide(); clearCut(); return; }
+
+    setBead(true);
+
+    /* THE MOUTH. The target's own edge light is cut where the neck arrives, so
+       the outline of the merged body is one continuous contour: this stroke
+       around the bead and the neck, the target's own light around the target,
+       and neither of them across the join. That crossing pair of strokes was
+       the whole reason the neck read as two objects touching. */
+    setCut(T.el, cx - box.left, cy - box.top, R + K * CUTK);
+
+    /* THE GLASS, read off the target, never redeclared. The gradient is pinned
+       to the target's own box so the tint is continuous across the neck. */
+    const mat = T.bg + "|" + T.bgc + "|" + T.bf;
+    if (mat !== lastMat){
+      lastMat = mat;
+      fill.style.backgroundImage = T.bg;
+      fill.style.backgroundColor = T.bgc;
+      fill.style.backdropFilter = T.bf;
+      fill.style.webkitBackdropFilter = T.bf;
+      fill.style.backgroundRepeat = "repeat";
+    }
+    fill.style.backgroundSize = box.width.toFixed(1) + "px " + box.height.toFixed(1) + "px";
+    fill.style.backgroundPosition = (box.left - ox).toFixed(1) + "px " + (box.top - oy).toFixed(1) + "px";
+
+    /* Everything above is computed in viewport space, because that is what
+       getBoundingClientRect and the pointer both speak. The two layers are
+       positioned in DOCUMENT space, so the scroll offset is added here and only
+       here. Path data stays relative to ox/oy and is unaffected. */
+    const px = (ox + scrollX).toFixed(1), py = (oy + scrollY).toFixed(1);
+    fill.style.left = px + "px";  fill.style.top = py + "px";
+    fill.style.width = W.toFixed(1) + "px"; fill.style.height = H.toFixed(1) + "px";
+    const cp = "path('" + dF + "')";
+    fill.style.clipPath = cp;
+    fill.style.webkitClipPath = cp;
+
+    rimS.style.left = fill.style.left; rimS.style.top = fill.style.top;
+    rimS.setAttribute("width", W.toFixed(1));
+    rimS.setAttribute("height", H.toFixed(1));
+    clipP.setAttribute("d", dF);
+    rimP.setAttribute("d", dR);
+    if (rimL) rimL.setAttribute("d", dL);
+    /* The same two lights every other surface carries, but split the way the
+       panes split them: a dim ring everywhere at 0.62 of the edge light, and the
+       full edge light only where the contour faces up. Driven by the merged
+       silhouette, so the neck is lit as one body. */
+    grad.setAttribute("y1", (lo - oy).toFixed(1));
+    grad.setAttribute("y2", (hi - oy).toFixed(1));
+    gA.setAttribute("stop-opacity", (spec * 0.62).toFixed(3));
+    gB.setAttribute("stop-opacity", (spec * 0.34).toFixed(3));
+    if (rimL) rimL.setAttribute("stroke-opacity", spec.toFixed(3));
+
+    if (!shown){ shown = true; fill.style.display = "block"; rimS.style.display = "block"; }
+  })();
+})();
+</script>
+</body>
+</html>
