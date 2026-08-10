@@ -2894,9 +2894,50 @@ if (!touch && PREVIEW !== "off") {
   });
 })();
 
-/* the accent sits on one word and stays there. It was cycling every 1.7s,
-   which is constant motion competing with everything else on the page. */
-document.querySelector("h1 em.cyc")?.classList.add("lit-word");
+/* THE ACCENT.
+   Cycles the blue across code, design and play. The colour transition already
+   lives on `h1 em` at .7s, so a class is all this has to move.
+
+   This was switched off at some point with a note saying it cycled every 1.7s
+   and was constant motion competing with the rest of the page, which was a fair
+   objection. It is back, with three answers to it. HOLD is 2400ms rather than
+   1700, so the colour actually settles between moves. It does not run while the
+   masthead is off screen, which is the whole time you are reading the index, and
+   the h1 sits below the intro's scroll track so this also keeps it still for the
+   whole prologue. And under prefers-reduced-motion it does not run at all: the
+   accent pins to the first word, which is exactly what it has been doing.
+
+   HOLD is the only number to touch. */
+(function accent(){
+  const words = Array.from(document.querySelectorAll("h1 em.cyc"));
+  if (!words.length) return;
+  let i = 0;
+  words[0].classList.add("lit-word");
+  if (words.length < 2) return;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const HOLD = 2400;
+  let timer = null, onScreen = true, awake = !document.hidden;
+
+  function step(){
+    words[i].classList.remove("lit-word");
+    i = (i + 1) % words.length;
+    words[i].classList.add("lit-word");
+  }
+  function sync(){
+    const want = onScreen && awake;
+    if (want && !timer) timer = setInterval(step, HOLD);
+    else if (!want && timer){ clearInterval(timer); timer = null; }
+  }
+
+  const h1 = words[0].closest("h1");
+  if (window.IntersectionObserver && h1){
+    new IntersectionObserver(e => { onScreen = e[0].isIntersecting; sync(); },
+                             { threshold:0 }).observe(h1);
+  }
+  addEventListener("visibilitychange", () => { awake = !document.hidden; sync(); });
+  sync();
+})();
 
 document.getElementById("replay")?.addEventListener("click", () => {
   try { sessionStorage.removeItem("mx30-intro-v2"); } catch (e) {}
