@@ -230,3 +230,15 @@ The panel is inert until you type the sequence, so it is safe to ship.
 - **Cost.** The ASCII ground redraws about 10,000 cells at 15fps in JavaScript.
   Comfortable on a laptop. If a low powered machine struggles, lower the column
   count in the background renderer.
+
+---
+
+## License
+
+Copyright (c) 2026 Anshul Patria. All rights reserved.
+
+This is **not** open source. No permission is granted to copy, reuse, modify,
+redistribute or deploy any part of this repository or the site it publishes, for
+any purpose, including personal and non-commercial ones. You are welcome to look
+at it and to link to it. See [LICENSE](LICENSE) for the terms, and ask first if
+you want to use something.

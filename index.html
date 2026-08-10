@@ -37,6 +37,14 @@ html.booting, html.booting body{ overflow:auto !important; height:auto !importan
 #boot, #prologue, #runway, #skip, #cur{ display:none !important; }
 .rise{ opacity:1 !important; transform:none !important; }
 </style></noscript>
+<script>
+/* Runs before first paint, so the frost is right on the first frame rather than
+   swapped in later. userAgentData is the one low entropy signal that is present
+   in Chromium, where SVG filters in backdrop-filter work, and absent in WebKit
+   and Gecko, where they do not. If WebKit ever closes bug 245510, delete this
+   line and Safari gets the real lens back. */
+if (!navigator.userAgentData) document.documentElement.className += " no-lens";
+</script>
 
 <style>
 :root{
@@ -730,6 +738,33 @@ h1 em.lit-word{ color:var(--signal); }
   .glass{ left:var(--glass-edge); }
 }
 
+/* ---------- TOUCH ----------
+   The panes were revealed by :hover and :focus-visible and nothing else, so on a
+   phone they sat at opacity 0 for the whole session and the index was type on
+   paper. There is no pointer to reveal them with, so they are simply open.
+
+   The filter has to be restated here because the rules above only put it on the
+   hover and focus states. One declaration serves both engines: --glass-filter is
+   the lens in Chromium and empty everywhere else, so this resolves to the
+   refraction on Android and to a 6px frost on iOS.
+
+   The border going transparent is the author's own note applied to touch: a
+   separator cuts straight through a floating slab, and on touch every row is a
+   slab all the time. Delete those two lines to keep the hairlines. */
+@media (hover:none){
+  .glass, .glass-t{ opacity:1; }
+  .glass{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+  .glass-t{
+    backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
+  .row{ border-bottom-color:transparent; }
+  .row:hover{ border-bottom-color:transparent; }
+}
+
 /* ---------- ONE GLASS ----------
    The navigation bar is the material. Everything else on the page now wears it.
 
@@ -792,6 +827,35 @@ h1 em.lit-word{ color:var(--signal); }
     inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45)),
     0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 2.2));
 }
+
+/* ---------- WHEN THERE IS NO LENS ----------
+   The refraction on this page is an feDisplacementMap referenced from
+   backdrop-filter. That is a Chromium only capability: WebKit bug 245510 is
+   still open and Firefox has never shipped it. Every browser on iOS is WebKit,
+   Chrome for iOS included, so on any iPhone or iPad there is no lens and there
+   never was.
+
+   Every glass surface already declares a non-SVG fallback of
+   blur(var(--glass-blur)), and --glass-blur is 0px because in Chromium the
+   refraction carries the whole effect. So the fallback resolved to blur(0px):
+   the glass degraded to a flat tint with a 25% saturation bump, which is the
+   nothing you were looking at.
+
+   Two tokens fix it everywhere at once. --glass-blur becomes a real frost, and
+   --glass-filter becomes EMPTY, which is legal for a custom property and makes
+   the url() vanish from all fourteen declarations that reference it. That second
+   part matters: a browser that parses backdrop-filter:url() and then ignores it
+   might drop the whole declaration rather than just that one function, and then
+   the frost would go with it.
+
+   Two guards, because neither is sufficient alone. @supports catches browsers
+   that reject the syntax, but it tests whether a value parses and not whether it
+   is honoured, and Safari parses backdrop-filter:url() and then ignores it. The
+   html.no-lens class is set by the probe in the head for that case. */
+@supports not (backdrop-filter: url(#x)){
+  :root{ --glass-blur: 6px; --glass-filter: ; }
+}
+html.no-lens{ --glass-blur: 6px; --glass-filter: ; }
 
 /* ---------- loader ---------- */
 html.booting, html.booting body{ overflow:hidden; height:100%; }
@@ -1832,10 +1896,15 @@ const Ground = (function(){
 
   const t0 = performance.now();
   let last = 0, rowsA = [], rowsB = [], parity = 0, gridKey = "";
+  /* On touch every row now carries an always-on backdrop-filter, so each redraw
+     of this grid forces every slab to re-blur. Half the rate is half that work,
+     and on an ambient texture read through a 6px frost it is not something you
+     can see. */
+  const AMBIENT = matchMedia("(hover:none)").matches ? 200 : 100;
 
   (function tick(now){
     requestAnimationFrame(tick);
-    if (now - last < 100) return;                /* 10fps, it is ambient */
+    if (now - last < AMBIENT) return;            /* ambient, not a frame rate */
     last = now;
     /* The loader and the intro are both opaque fullscreen white layers. This
        grid was being evaluated and written into two full screen <pre> elements
