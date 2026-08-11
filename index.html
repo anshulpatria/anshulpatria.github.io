@@ -27,22 +27,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,200..800&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
-<!-- Without script the loader never finishes, so html.booting keeps the page
-     locked at overflow:hidden behind a white overlay and .rise never reaches
-     opacity 1: a blank screen, permanently. This unlocks it. The project rows
-     are built by script and will not be there, but the masthead, the footer and
-     the links are, which is better than nothing at all. -->
+<!-- Without script the loader never finishes, so html.booting keeps the page locked at
+   overflow:hidden behind a white overlay and .rise never reaches opacity 1: a blank screen,
+   permanently. -->
 <noscript><style>
 html.booting, html.booting body{ overflow:auto !important; height:auto !important; }
 #boot, #prologue, #runway, #skip, #cur{ display:none !important; }
 .rise{ opacity:1 !important; transform:none !important; }
 </style></noscript>
 <script>
-/* Runs before first paint, so the frost is right on the first frame rather than
-   swapped in later. userAgentData is the one low entropy signal that is present
-   in Chromium, where SVG filters in backdrop-filter work, and absent in WebKit
-   and Gecko, where they do not. If WebKit ever closes bug 245510, delete this
-   line and Safari gets the real lens back. */
+/* Runs before first paint, so the frost is right on the first frame rather than swapped in
+   later. */
 if (!navigator.userAgentData) document.documentElement.className += " no-lens";
 </script>
 
@@ -59,59 +54,8 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
   --f-display: "Bricolage Grotesque", sans-serif;
   --f-body:    "Instrument Sans", sans-serif;
 
-  /* LOCKED. These ten values, plus the matching feDisplacementMap scales
-     below, are the material for the whole page: the nav bar, every card
-     frame, the cursor, the scroll intro, Reach out.
-
-     ONE EXCEPTION, BELONGING TO .row: --card-frost, declared just below this
-     block. A card frosts at 2px where every other surface frosts at 0.
-     Everything else about a card, the tint, both edge lights, the saturation,
-     the brightness, the shadow, is
-     still read from the tokens here. Nothing else on the page reads either
-     card token: the nav bar, the pills, the bead and the CTAs are untouched. Reach out differs only in
-     its own colour override; nothing else about it, and nothing about any
-     other surface, is a different recipe from this one. Do not retune these
-     without being asked; they were arrived at deliberately through the dev
-     panel and are meant to stop moving.
-
-     REFRACTION AND CHROMATIC, RETUNED. Was 35 / 20, which is a max channel
-     shift (feDisplacementMap scale 55) of roughly 18px at the rim. That is
-     bigger than the ENTIRE bead, --bead: 31px above, radius 15.5px. Every
-     pass was trying to sample content that far outside a 31px circle, which
-     does not fringe, it clips: the filter hits the edge of its own region and
-     returns a flat colour instead of a gradient, which is the solid patches
-     of cyan/red/yellow that showed up over hard edges (coloured headline
-     text, a card's black edge). Same failure on the merge bridge, worse,
-     since its box is often a thin sliver a few px tall.
-     14 / 5 keeps a real, visible bend (a ~6px max shift on the reddest
-     channel) without ever asking a 31px circle to sample 18px past its own
-     edge. This is a global change: the nav bar and the pills get gentler
-     refraction too now, since one filter serves all of them and the smallest
-     consumer is what has to survive. If the bigger surfaces read as wanting
-     more punch, that is a live conversation to have through the dev panel,
-     not a reason to put the old numbers back, since the old numbers are what
-     broke the bead and the frames in the first place.
-
-     RETUNED AGAIN, TO 50 / 6, ON REQUEST: scale R 56, G 50, B 44. The note
-     above is still correct about the mechanism and wrong about the remedy. It
-     is true that asking a 31px circle to sample 18px past its own edge clips
-     rather than fringes. The conclusion it drew was to shrink the refraction
-     for EVERY surface down to what the smallest one could survive, which threw
-     away the material on the frames to protect the bead.
-
-     The real variable was never the scale, it is that the lens ramp is a
-     PERCENTAGE of the box (both feImage maps are stretched to the filter
-     region with preserveAspectRatio="none") while the displacement scale is in
-     PIXELS. Those two do not commute across sizes. At 5.5% in from the edge a
-     900px card puts the throw 49px inside itself and a 31px bead puts it 1.7px
-     inside itself, so one number cannot describe both.
-
-     So the scale is now proportional, and lives in ONE place: --lens-scale
-     below is the reference triple for a full size surface, and #cur i gets its
-     own instance of the identical ramp with the triple multiplied by the
-     bead's size over that reference. Self similar, which is what "the same
-     material at a different scale" actually means, instead of the same pixel
-     count applied to boxes that differ by 30x. See THE BEAD'S OWN LENS. */
+  /* LOCKED. These values, and the feDisplacementMap scales below, are the material for
+     every glass surface on the page. One exception belongs to .row alone: --card-frost. */
   --glass-radius: 18px;
   --glass-edge: 18px;
   --glass-blur: 0px;
@@ -124,27 +68,8 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
      once and ignores later edits to the filter, so the reference must change */
   --glass-filter: url(#gcA);
 
-  /* THE CARD LENS, TRIED AND REMOVED, WITH THE NUMBERS THAT DECIDED IT.
-     A card used to run its own feDisplacementMap, a lighter build of #gcA with
-     its ramp pulled in from 5.5% to 2.2% so the bend would land inside the 9px
-     rim rather than mostly behind the picture, down to a single displacement
-     pass by the end. None of that mattered, because the cost was never the
-     primitive count, it was the region: a backdrop-filter is priced by the
-     element's whole box regardless of what is visible or how many passes run
-     over it, and even one pass over a 900px card several times a screen is
-     enough to matter.
-
-     Measured on the real page, with the Chrome FPS meter, five seconds of
-     scrolling past the two full width tiles each time. Lens off: 116 to
-     121fps, the display's own 120Hz ceiling, not one dropped frame in the
-     sample. Lens on: 19 to 53fps, with single digit stalls inside that. Frost
-     alone, the same backdrop-filter carrying only blur() and no SVG reference,
-     cost nothing measurable either way, so the split is not blur versus no
-     blur, it is the displacement chain specifically, on a box this size.
-
-     So the card carries frost, tint and both edge lights, and no bend. It is
-     the one surface on the page that reads as frosted glass with a flat
-     backdrop rather than a refracting one. */
+  /* Cards carry frost, tint and both edge lights, but no lens. Measured: 116 to 121fps
+     without the displacement filter, 19 to 53fps with it. Frost alone costs nothing. */
   --card-frost: 2px;
 }
 :root{
@@ -154,26 +79,13 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
      the one number. */
   --bead: 31px;
 
-  /* THE SPLIT. The row is two panes now: a frosted text pane on the left and the
-     preview pane on the right. --split is the left pane's share of the glass and
-     --vgap is the paper channel between them, which is what reads as the divide.
-     Both panes and the grid that fills them are derived from these two numbers,
-     so the glass and the layout cannot drift apart. */
+  /* THE SPLIT. The row is two panes now: a frosted text pane on the left and the preview
+     pane on the right. */
   --split: 0.34;
   --vgap: 12px;
   --frost-t: 3.5px;      /* the text pane is frosted, the preview pane is not */
   --pad: clamp(20px, 5vw, 76px);
-  /* HOW FAR THE RAIL CAPSULE DRAWS IN once you are into the projects.
-
-     This was margin:0 max(14px, calc((100% - 1100px) / 2)), which is a fixed
-     1100px capsule centred in whatever space is left. Nothing else on the page
-     has a max width, so on anything bigger than the laptop it was tuned on the
-     rows kept growing and the nav did not: at 2560 the rows are 2532px wide and
-     the capsule was still 1100px, a 1432px mismatch, and at 4K it was 2712px.
-
-     Now it is an inset rather than a width, and it grows at 5vw, the same rate
-     as --pad, so the capsule draws in at the same rate the page's type does and
-     can never become an island again. One number to tune. */
+  /* HOW FAR THE RAIL CAPSULE DRAWS IN once you are into the projects. */
   --rail-inset: clamp(14px, 5vw, 148px);
   /* the channel between tiles in the index grid */
   --tile-gap: clamp(18px, 2.6vw, 52px);
@@ -204,11 +116,9 @@ body{
   pointer-events:none; overflow:hidden; white-space:pre;
   font-family:ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 }
-/* The ground was landing at roughly the same grey as --ink-soft, which is what
-   the meta, the myth line and the descriptions are set in, so text and texture
-   sat on top of each other. It is now well lighter than the lightest type, and
-   masked so it falls away entirely behind the masthead and thins under the
-   index. Prologue layers are #layerInk / #layerHot and are untouched. */
+/* The ground was landing at roughly the same grey as --ink-soft, which is what the meta,
+   the myth line and the descriptions are set in, so text and texture sat on top of each
+   other. */
 #bgInk,#bgHot{
   -webkit-mask-image:linear-gradient(to bottom,
       transparent 0, rgba(0,0,0,.34) 10%, rgba(0,0,0,.72) 28%, rgba(0,0,0,.90) 58%, #000 100%);
@@ -236,10 +146,9 @@ a{ color:inherit; text-decoration:none; }
 }
 .rail.tight{ top:10px; }
 
-/* At rest it is full bleed with a hairline. Once you are into the projects it
-   draws in to a floating capsule: margins open, the corners round off, the
-   hairline goes and a shadow appears. Margins are lengths at both ends so
-   they interpolate; a max-width from none would not. */
+/* At rest it is full bleed with a hairline. Once you are into the projects it draws in to a
+   floating capsule: margins open, the corners round off, the hairline goes and a shadow
+   appears. */
 .rail-in{
   position:relative;
   display:flex; align-items:baseline; justify-content:space-between; gap:16px;
@@ -293,6 +202,56 @@ a{ color:inherit; text-decoration:none; }
 .rail span{ font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--ink-soft); }
 .rail em{ font-style:normal; color:var(--signal); }
 
+/* A div, not a span, so .rail span above does not match it and apply the
+   readout's own type to the wrapper as well.
+
+   44px, not the 22 it was. Two things come out of that number. The gap is what
+   moves the icon left, since the button's own layout width is unchanged (see
+   below), so the icon's right edge now sits 44px off the readout instead of 22.
+   And 44px is also the free space the enlarged hit area needs on its right
+   without reaching under the text. */
+.rail-end{ display:flex; align-items:baseline; gap:44px; }
+
+/* THE HIT AREA IS 44px. THE ICON IS STILL 16.
+   A 16px square is a fair target with a mouse and a poor one with a thumb, and
+   this is the only control in the rail, so it should be the easiest thing on the
+   page to hit. box-sizing is border-box globally, so width 44 with padding 14
+   leaves exactly the 16px the svg wants.
+
+   The negative margin is what makes this free. -14px on each side cancels the 28
+   the box grew by, so the button still occupies 16px of layout and neither the
+   rail's height nor the readout's position moves by a pixel: the extra 28px of
+   clickable area is spent outward, over margin that was doing nothing. */
+.mute{
+  appearance:none; -webkit-appearance:none;
+  background:none; border:0;
+  width:44px; height:44px; padding:14px;
+  margin:-14px;
+  display:grid; place-items:center;
+  /* the row is baseline aligned and an svg has no baseline of its own, so it is
+     nudged to sit with the cap height of the readout beside it */
+  align-self:center; position:relative; top:1px;
+  color:var(--ink-soft);
+  cursor:pointer;
+  touch-action:manipulation;          /* no 300ms tap delay on the phone */
+  -webkit-tap-highlight-color:transparent;
+  transition:color .25s var(--ease), opacity .25s var(--ease);
+}
+.mute:hover{ color:var(--ink); }
+/* on the box now, not tight around the glyph, so the ring shows what is actually
+   clickable rather than implying the old 16px target */
+.mute:focus-visible{ outline:2px solid var(--signal); outline-offset:-4px; border-radius:12px; }
+.mute svg{ display:block; width:16px; height:16px; overflow:visible; }
+.mute .mute-cone{ fill:currentColor; stroke:none; }
+.mute .mute-on path, .mute .mute-off path{
+  fill:none; stroke:currentColor; stroke-width:1.4;
+  stroke-linecap:round; stroke-linejoin:round;
+}
+.mute .mute-off{ display:none; }
+.mute[aria-pressed="true"]{ color:rgba(22,23,26,.30); }
+.mute[aria-pressed="true"] .mute-on{ display:none; }
+.mute[aria-pressed="true"] .mute-off{ display:block; }
+
 /* ---------- masthead ---------- */
 .top{ padding:clamp(64px,13vh,144px) var(--pad) clamp(48px,8vh,84px); }
 
@@ -320,17 +279,8 @@ h1 em.lit-word{ color:var(--signal); }
 }
 
 /* ---------- index ---------- */
-/* THE COMPOSITION.
-   Eight tiles on a twelve column grid, each with its own span and its own
-   aspect. The spans and aspects are DATA, not CSS: every card carries --span
-   and --ar as inline custom properties written from the PROJECTS array, so the
-   composition is retuned in one place in the script and never here.
-
-   Why not a uniform grid. These are tools, and they are not all the same shape:
-   the calligraphy is 0.78, the line grid is square, the rest run 1.55 to 1.78.
-   Each frame is chosen to match its picture, so nothing is cropped to a sliver,
-   and the varying heights are what makes the page read as composed rather than
-   generated. */
+/* THE COMPOSITION. Eight tiles on a twelve column grid, each with its own span and its own
+   aspect. */
 .legend{ display:none !important; }   /* three columns described a row, not a grid */
 
 .index{
@@ -341,18 +291,8 @@ h1 em.lit-word{ color:var(--signal); }
   padding:0 var(--pad) clamp(40px, 6vh, 90px);
 }
 
-/* THE CARD, AS ONE OBJECT.
-   Frame, then preview, then type, inside a single rectangle with a glass edge.
-
-   It used to be two separate things: a picture, and a glass panel under it
-   holding the text. That is what made the cursor behave differently arriving
-   from above than from below, because above the panel was a black image and
-   below it was paper, and it is what made the bead seem to disappear: it was
-   crossing surfaces that had nothing in common. There is one rectangle now, so
-   there is one approach, from any side, and it is always the same.
-
-   No isolation: it would form a backdrop root and the glass edge could then
-   never see the paper behind the card. */
+/* THE CARD, AS ONE OBJECT. Frame, then preview, then type, inside a single rectangle with a
+   glass edge. */
 .row{
   position:relative;
   grid-column:span var(--span, 6);
@@ -360,48 +300,12 @@ h1 em.lit-word{ color:var(--signal); }
   min-width:0;
   padding:var(--frame-w);
   border-radius:calc(var(--glass-radius) + var(--frame-w));
-  /* THE FROSTED FRAME, AND WHY IT LOOKED FROSTED AT FROST 0.
-     This was background:rgba(255,255,255,.55), a flat 55% white wash, described
-     as "a wash rather than a fill, so the ASCII ground still reads through the
-     card". At 55% it does not read through, it reads as milk, and it was the
-     answer to "the frames look frosted" while --glass-blur sat at 0 the whole
-     time: frost was never the blur here, it was this.
-
-     It was also a fourth material. The tint token is 0.2, the shared gradient
-     built from it peaks at 0.15 alpha, and .row::after was ALREADY painting that
-     gradient over the top of this wash, so a card carried the token material
-     plus 0.55 of flat white underneath it while the nav bar and the pills
-     carried the token material alone. Same page, same design, four recipes.
-
-     And it is what made the cursor turn into a grey slab. The merge bridge
-     copies the target's own background onto itself, so bulging off a card's
-     inner edge it painted 0.55 white over the black preview picture, which is
-     an opaque grey blob, not glass. Measured, bead at the frame's inner edge:
-     interior +127 against the picture behind it. Nothing about a lens or a
-     shadow could have fixed that; the bridge was faithfully copying paint.
-
-     The row now carries the shared gradient itself, exactly the way .gpill
-     does, and .row::after is left holding only the two edge lights, so the
-     recipe appears once per surface instead of twice. See ONE GLASS. */
+  /* THE FROSTED FRAME, AND WHY IT LOOKED FROSTED AT FROST 0. */
   box-shadow:0 2px 8px rgba(22,23,26,calc(var(--glass-shadow) * 1.0));
   transition:box-shadow .45s var(--ease);
-  /* THE GLASS IS THE CARD'S OUTER EDGE NOW, AND NOTHING ELSE.
-     The filter lives on .row, so its backdrop is the page ground behind the
-     card and only that: the paper and the two ASCII layers. .frame and .card
-     are CHILDREN, they paint in front of a finished backdrop, so no amount of
-     lens or frost on this element can reach the picture. That is not a
-     precaution, it is the layering: a backdrop-filter cannot see its own
-     descendants. The picture is untouched by construction.
-     Frost is --card-frost, 2px, which is a card-only token. --glass-blur stays
-     at 0 for every other surface.
-
-     No @supports(backdrop-filter: url(#x)) branch here, on purpose. Every
-     other glass surface gets one, to add the SVG lens where Chromium supports
-     it. The card never did: see THE CARD LENS, TRIED AND REMOVED, up in the
-     tokens, for the measurement that settled it. So blur, saturate and
-     brightness are the whole declaration, identical on every engine, and
-     there is no url() on this element for WHEN THERE IS NO LENS to have to
-     null. */
+  /* THE GLASS IS THE CARD'S OUTER EDGE NOW, AND NOTHING ELSE. The filter lives on .row, so
+     its backdrop is the page ground behind the card and only that: the paper and the two
+     ASCII layers. */
   backdrop-filter:blur(var(--card-frost)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   -webkit-backdrop-filter:blur(var(--card-frost)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
 }
@@ -409,11 +313,7 @@ h1 em.lit-word{ color:var(--signal); }
 
 .frame{
   position:relative; z-index:1;
-  /* z-index:1, not auto. ::after always paints after every real child in
-     document order, no matter where the markup puts it, so .row::after would
-     otherwise land on top of the picture rather than only in the ring outside
-     it. This is the one line standing between "the frame is glass, the picture
-     is clean" and the opposite. */
+  /* z-index:1, not auto. */
   display:block;
   width:100%;
   aspect-ratio:var(--ar, 3 / 2);
@@ -424,28 +324,9 @@ h1 em.lit-word{ color:var(--signal); }
   background:#101114;
 }
 
-/* THE FRAME'S INNER EDGE, DELETED.
 
-   Four bars used to sit ON the picture's edges, inside .frame, carrying the
-   tint, the two inset lights and a backdrop-filter, on the reasoning that the
-   picture was the only thing on a card with enough contrast for a lens to bend.
-   That reasoning is what made them wrong. A bar whose backdrop IS the artwork
-   is a bevel drawn on top of the work: it saturated, lit and framed the
-   photograph's own outer 18px, so every screenshot on this page was being
-   modified by the furniture around it.
-
-   The glass is the card's OUTER edge now, on .row, where the backdrop is the
-   page ground. See the declaration up in .row and the tokens at the top. The
-   picture keeps nothing over it at all: no bars, no frost, no lens, no
-   saturate. It sits in its rounded rectangle exactly as it was shot.
-
-   --glass-edge (Inset, in the dev panel) is no longer read by a card. It still
-   drives .dev-rim, so the token and the slider stay. */
-
-/* THE PICTURE. Nothing sits on top of it: the glass is the card's edge now, not
-   a pane over the work. Quiet at rest is opacity over the dark backing, which is
-   a compositor property and costs nothing, rather than a filter, which forces
-   the layer to re-render on every repaint eight times over. */
+/* THE PICTURE. Nothing sits on top of it: the glass is the card's edge now, not a pane over
+   the work. */
 .shot{
   position:absolute; inset:0;
   width:100%; height:100%;
@@ -518,10 +399,8 @@ h1 em.lit-word{ color:var(--signal); }
   color:#fff; border-color:var(--signal); background-color:var(--signal);
 }
 
-/* THE LIVE LINK, showing rather than sliding out.
-   These are things that run in a browser, so the address is the proof. It used
-   to animate from 0 to 240px of width on hover, which is a layout animation and
-   in a grid it would push the arrow around. */
+/* THE LIVE LINK, showing rather than sliding out. These are things that run in a browser,
+   so the address is the proof. */
 /* .meta held the type label and the arrow. Both moved into .ep and .cta. */
 .url{
   display:block; margin:9px 0 0;
@@ -532,15 +411,7 @@ h1 em.lit-word{ color:var(--signal); }
 }
 .row:hover .url{ color:var(--signal); }
 
-/* THE OPENING ANIMATION.
-   Three glyphs pulled from the same ramp the ASCII ground draws with
-   (" .:-=+*#%@"), reserved at a fixed width so they cost no layout when they
-   appear: opacity and a small scale, nothing that reflows. At rest they take
-   no visual space (max-width:0, overflow hidden), so the button is exactly
-   "Open" plus the arrow, unchanged. On hover they widen open and flicker in
-   one after another, dot then plus then star, like the row's own field
-   resolving out of noise before the arrow, which is the site's own visual
-   language rather than a borrowed one. */
+/* THE OPENING ANIMATION. */
 .glyphs{
   display:inline-flex; gap:2px; max-width:0; overflow:hidden;
   font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
@@ -562,41 +433,9 @@ h1 em.lit-word{ color:var(--signal); }
 
 .arrow{ flex:none; width:18px; height:18px; }
 .arrow line,.arrow polyline{ stroke:currentColor; stroke-width:1.5; fill:none; }
-/* No colour here, and no transform either any more: the arrow used to
-   translate(4px,-4px) on hover, a diagonal nudge which is exactly why it read
-   as off centre the moment you hovered it, since it was, by design, no longer
-   sitting where it started. The glyphs above are the button's motion now; the
-   arrow just stays where it is centred. */
 
 /* ---------- in row preview, seen through a lens ---------- */
-/* The preview is no longer a band across the row. The page is laid over the
-   row at the row's own width, and only a circle at the pointer reveals it,
-   like a magnifier. Outside that circle the row is just the glass highlight.
-   z-index 1 keeps it under .shell, so the row's own type stays on top. */
-/* THE PREVIEW BOX.
-
-   position:absolute, not fixed, and pinned in DOCUMENT coordinates. That is the
-   whole fix for the preview trailing the glass on a fast scroll. A fixed box has
-   to be repositioned by script on every scroll event, and script runs after the
-   compositor has already moved the page, so the box arrived a frame or more
-   behind the row's own glass, which is in normal flow and scrolls for free. In
-   document coordinates the box does not have to be moved on scroll at all: it
-   travels with the page exactly as the glass does, and the number written by
-   place() is scroll-invariant, so even a late frame writes the same value.
-
-   Was: a circle at the pointer, cut with clip-path, on an element that carried
-   BOTH a transform and will-change:transform, with a transformed iframe inside
-   it. Chrome promotes that iframe to its own compositing layer and applies an
-   ancestor clip as a rectangular layer clip, so the circle degraded to the
-   bounding box. The comment that used to sit here predicted that exact failure
-   as the worst case. It was not the worst case, it was the normal case.
-
-   No transform on it and no will-change, so overflow:hidden with a
-   border-radius is a clip Chrome honours even on a composited child, and
-   contain:paint states the same guarantee a second way. The opening animation
-   moved off this element onto a child, so if clip-path ever degrades the worst
-   case is the preview appearing all at once instead of growing in. Bounded, and
-   it cannot leak. */
+/* THE PREVIEW BOX. position:absolute, not fixed, and pinned in DOCUMENT coordinates. */
 #art{
   position:absolute; left:0; top:0; width:0; height:0; z-index:1;
   pointer-events:none;
@@ -610,9 +449,7 @@ h1 em.lit-word{ color:var(--signal); }
    numbers, as the row's own glass. The preview cannot be a different size or
    shape from the glass in front of it, because there is only one shape. */
 #artClip{ position:absolute; inset:0; clip-path:inset(0 round var(--glass-radius)); }
-/* Fills the rectangle. It used to be laid out at the row's size and then pushed
-   around by --ix/--iy for a parallax that no longer exists, which is what left
-   the picture short of the rectangle's height on Field. */
+/* Fills the rectangle. */
 #artShot{
   position:absolute; inset:0; display:block;
   width:100%; height:100%; object-fit:cover; object-position:center;
@@ -705,15 +542,7 @@ h1 em.lit-word{ color:var(--signal); }
 .foot a.gpill{ border:1px solid rgba(22,23,26,.13); padding-bottom:13px; }
 @supports (backdrop-filter: url(#x)){
   .gpill{
-    /* THE PILLS TAKE THE SAME MAP AS EVERYTHING ELSE.
-       These were moved to the whole box lens map because at 130x34 a bevel map
-       puts its ramp 7px in with an 18.5px throw, so the bend clamps instead of
-       fringing and reads as much weaker than the nav bar. That reading was
-       correct and the remedy was rejected: the lens map made them read as water
-       rather than glass. One map everywhere is the norm, and a small pill showing
-       a tighter, brighter bevel than a 1440px pane is the honest consequence of
-       one material meeting two very different box sizes. See THE SAME MATERIAL,
-       THE SAME FILTER INSTANCE, AND THE SAME MAP for the full geometry. */
+    /* THE PILLS TAKE THE SAME MAP AS EVERYTHING ELSE. */
     backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
     -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   }
@@ -753,29 +582,7 @@ h1 em.lit-word{ color:var(--signal); }
   transition-delay:var(--d,0ms);
 }
 
-/* ---------- responsive ----------
-   THE COLLAPSE, AND WHY IT USED TO HAPPEN TOO EARLY.
-
-   This block read: at 1080 the twelve column grid halves, so "a 7 and a 5
-   become two full width tiles rather than two thin ones". That was true of the
-   composition it was written for. The spans in PROJECTS are 12 and 6 now, so
-   halving the grid to six columns AND forcing every row to span 6 made every
-   tile full width at 1080. That is iPad landscape at 1024 and iPad Air at 1180
-   spending an entire viewport width on one card, and the pairing that makes the
-   page read as composed rather than as a list was gone at the first width where
-   anyone would have noticed it.
-
-   The pairs survive to 900 instead. Below that a half tile is under 430px and
-   the name starts fighting the Open button for the same track, which is the
-   real reason to give the pairing up, and it happens at a width where one
-   column is the better shape anyway.
-
-   The aspect override was the worse half of the same bug. It only fired at 720,
-   so between 721 and 1080 a tile was full width and STILL wearing its data
-   aspect. Line Visualizer and Artboard 42 are 4/5: at 1000px wide that is a
-   1250px tall card, taller than the screen showing it, and two of them in a
-   row. Aspect is normalised at exactly the width the grid becomes one column
-   now, so the two can no longer disagree about what shape a tile is. */
+/* responsive. THE COLLAPSE, AND WHY IT USED TO HAPPEN TOO EARLY. */
 @media (max-width:1200px){
   /* still pairs here, just tighter. The step is on the container query unit, so
      the name tracks its own tile's width rather than the window's. */
@@ -796,12 +603,7 @@ h1 em.lit-word{ color:var(--signal); }
   .myth, .desc{ font-size:13px; }
 }
 
-/* ---------- 320 to 400 ----------
-   .row-in is the thing that gives out first. It is two tracks, text and the
-   Open button, and at 360px the text track is about 200px once the button and
-   the 16px gap are paid for, which wraps a two word project name onto three
-   lines and then clamps the description into uselessness. The button drops below
-   the text instead, left aligned under it, so the name gets the full width. */
+/* 320 to 400. .row-in is the thing that gives out first. */
 @media (max-width:400px){
   h1{ font-size:clamp(34px, 11vw, 52px); }
   .row-in{ grid-template-columns:minmax(0, 1fr); row-gap:12px; }
@@ -811,37 +613,20 @@ h1 em.lit-word{ color:var(--signal); }
   .url{ font-size:11px; }
 }
 
-/* ---------- short viewports ----------
-   13vh of masthead padding is 144px on a desktop and right there. On a phone
-   held sideways the viewport is around 380px tall, so the masthead alone was
-   most of the screen before a single tile appeared. Height is the thing being
-   asked about rather than orientation, because a short window on a laptop has
-   exactly the same problem and no orientation to report. */
+/* short viewports. 13vh of masthead padding is 144px on a desktop and right there. On a
+   phone held sideways the viewport is around 380px tall, so the masthead alone was most of
+   the screen before a single tile appeared. */
 @media (max-height:560px) and (min-width:480px){
   .top{ padding:clamp(28px,8vh,72px) var(--pad) clamp(24px,5vh,48px); }
   h1{ font-size:clamp(32px,6vw,64px); }
   .top p{ margin-top:14px; }
   .foot{ padding-top:clamp(32px,6vh,64px); }
 }
-/* A LANDSCAPE PHONE IS WIDE AND SHORT, and the width tiers above cannot see
-   that. 852x393 is wider than the 720 tier, so none of the phone rules reach it,
-   and narrower than 900, so it gets the one column meant for an iPad held
-   upright. On a 393px tall viewport that is a 767px tile: 511px of picture plus
-   its type, so no card is ever on screen whole and every one of them has to be
-   scrolled past in two moves.
-
-   Two equal columns at the same 3:2 is a 380px tile, 253px of picture, which
-   fits with the type and leaves the next row peeking. The description drops to
-   one line for the same reason: vertical space is the scarce axis here, not
-   horizontal, which is the opposite of every other tier on the page. */
+/* A LANDSCAPE PHONE IS WIDE AND SHORT, and the width tiers above cannot see that. */
 @media (max-height:560px) and (min-width:600px){
   .index{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--tile-gap); }
   .row{ grid-column:auto; }
-  /* The aspect has to be restated here rather than inherited from the 900 tier.
-     A 915x412 Pixel held sideways is WIDER than 900, so none of the width rules
-     touch it and Artboard 42 was still 4/5: a 400px tile 500px tall on a 412px
-     screen. This block is the only one that knows the viewport is short, so it
-     is the only one that can be trusted to flatten the frame. */
+  /* The aspect has to be restated here rather than inherited from the 900 tier. */
   .frame{ aspect-ratio:3 / 2 !important; }
   .txt{ container-type:normal; }
   .name{ font-size:clamp(19px, 2.6vw, 28px); }
@@ -853,23 +638,7 @@ h1 em.lit-word{ color:var(--signal); }
   #art{ display:none; }
 }
 
-/* ---------- touch ----------
-   THE RESTING STATE HAS TO BE THE FINISHED STATE.
-
-   Everything worth seeing about a card sat behind :hover, which on a phone is
-   either never or, worse, sticky after a tap: iOS keeps the hover state on the
-   last thing touched, so one tap left a card lit while the next tap lit another
-   and neither let go. So the picture waited at opacity .84 forever, the Open
-   button stayed a grey outline, and the row read as disabled.
-
-   Resolved rather than hovered: the picture at full opacity and the button
-   already coloured in. The 1.02 scale stays off, since there is nothing to
-   transition from, and it moves onto :active so a tap still answers.
-
-   The button also has to be thumb sized. 8px of padding on a 10px label is a
-   27px target. The row itself is the link, so nothing is unreachable at 27px,
-   but a control that small does not read as pressable, which is the same
-   problem wearing a different hat. */
+/* touch. THE RESTING STATE HAS TO BE THE FINISHED STATE. */
 @media (hover:none), (pointer:coarse){
   .shot{ opacity:1; }
   .cta{
@@ -889,12 +658,6 @@ h1 em.lit-word{ color:var(--signal); }
   max-height:calc(100dvh - 36px); overflow-y:auto; overscroll-behavior:contain;
   padding:14px 16px 16px;
   background:rgba(255,255,255,.92);
-  /* was blur(14px) saturate(160%), hardcoded, and it was the only frost left in
-     the file: a grep for blur([0-9] returned this one line. Frost is 0 for the
-     whole page, so a panel that quietly ran its own 14px was both off-material
-     and the thing that made "the frames look frosted" impossible to verify by
-     eye, since this sat on top of them while you were tuning. Reads the tokens
-     like everything else now. */
   backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
   -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
   border:1px solid rgba(22,23,26,.14); border-radius:12px;
@@ -962,36 +725,9 @@ h1 em.lit-word{ color:var(--signal); }
 }
 @supports (backdrop-filter: url(#x)){
   #cur i{
-    /* THE SAME MATERIAL, THE SAME FILTER INSTANCE, AND THE SAME MAP.
-       The bead ran a lens map for one round, #gcOrb, which ramped across its
-       whole box instead of anchoring near the edges. It refracted far more of
-       the surface, measured, and it was rejected on look: a full box lens reads
-       as WATER, a rounded volume bending everything behind it, and this is meant
-       to read as GLASS, a hard surface with a worked edge and a calm middle.
-       That is a design call and it settles the geometry argument this file has
-       had with itself for four rounds, so the argument is recorded rather than
-       repeated:
-
-           surface        box        ramp peak x/y     throw
-           nav bar    1440x60      79.2px / 3.3px    18.5px
-           card ring   629x18      34.6px / 1.0px    18.5px
-           blue pill   133x45       7.3px / 2.5px    18.5px
-           bead         31x31       1.7px / 1.7px    18.5px
-
-       A bevel map anchors its ramp 5.5% in from each edge, so on the nav bar the
-       bend sits 79px inside a wide pane and reads as thick worked glass, and on
-       a 31px bead it sits 1.7px in and reads as a bright refracting rim around a
-       clear centre. That IS what a glass bead looks like. It is not the same
-       amount of refraction and it was never going to be; it is the same
-       MATERIAL, which is what was actually being asked for.
-
-       What this costs, stated plainly so nobody rediscovers it: at 18.5px of
-       throw on a 31px box the rim samples past its own edge, so the outer ring
-       clamps rather than fringing cleanly. Measured on a 31px circle, 3% of the
-       disc goes flat and the centre picks up 11.6 of disturbance. Visible under
-       magnification against a hard pattern, not at rest against paper. The knob
-       for it is Refraction in the dev panel, which drives every surface at once,
-       exactly as intended. */
+    /* THE SAME MATERIAL, THE SAME FILTER INSTANCE, AND THE SAME MAP. The bead ran a lens
+       map for one round, #gcOrb, which ramped across its whole box instead of anchoring
+       near the edges. */
     backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
     -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   }
@@ -1006,85 +742,29 @@ h1 em.lit-word{ color:var(--signal); }
 }
 #cur.tap i{ animation:beadRipple 1.15s var(--ease); }
 
-/* THE MERGE.
-   The bead no longer opens into a 3x circle floating over the preview. Over a
-   row it hands itself to the row's own glass rectangle: the rectangle opens
-   from the bead's exact position at the bead's exact size, and the bead lets go
-   as it does. Same material on both, so it reads as one object changing shape.
-
-   There is no CSS transition on the bead's size any more, and that removal is
-   the Image 1 fix. The bead used to take 300ms to grow from 48px to 144px while
-   the preview's clip radius reached its final value on the first frame, so for
-   those 300ms the preview was simply larger than the glass around it. Size,
-   position and opening are now all lerped in one loop off one clock. */
+/* THE MERGE. The bead no longer opens into a 3x circle floating over the preview. */
 #cur i{ transition:width .3s var(--ease), height .3s var(--ease),
                     background .3s var(--ease), opacity .16s linear; }
 /* #cur.merged used to hide the bead once the old row lens had grown past
    halfway. Nothing sets that class any more; see the cursor module. */
 @media (prefers-reduced-motion:reduce){ #cur.tap i{ animation:none; } }
 
-/* ---------- the merge surface ----------
-   Two layers that carry NO material of their own. Every frame the merge loop
-   reads the target's own computed background and backdrop-filter and copies
-   them onto #mgFill, so there is exactly one glass recipe on this page and it
-   still lives on the objects. Nothing here declares a tint, a blur, a
-   refraction or an edge light.
-
-   #mgFill is the body of the merged silhouette MINUS the target's own
-   rectangle, which is the one decomposition that never stacks two
-   backdrop-filters on the same pixel. #mgRim is the same silhouette's edge
-   light, clipped to the fill so it reads as an inset the way every other
-   surface's does. */
-/* position:absolute, not fixed, and pinned in document coordinates for the same
-   reason #art is: the target's glass is in normal flow and scrolls on the
-   compositor, so a viewport-positioned bridge arrives a frame behind it and the
-   neck tears away from the panel on a fast scroll. */
+/* the merge surface. Two layers that carry NO material of their own. */
+/* position:absolute, not fixed, and pinned in document coordinates for the same reason #art
+   is: the target's glass is in normal flow and scrolls on the compositor, so a viewport-
+   positioned bridge arrives a frame behind it and the neck tears away from the panel on a
+   fast scroll. */
 #mgShadow, #mgFill, #mgRim{
   position:absolute; left:0; top:0;
   display:none; pointer-events:none;
 }
-/* THE SHADOW, ROUND TWO.
-   Round one put filter:drop-shadow() on #mgFill itself, because a box-shadow
-   on a clip-path'd element is cast from the rectangular BOUNDING BOX before
-   the clip runs, not the silhouette you see, so box-shadow was wrong here the
-   same way it would draw a rectangle around a circle.
-
-   drop-shadow() was the right primitive and the wrong element. CSS applies
-   filter first, then clip-path, to the result. #mgFill carries the clip-path
-   that IS the merged outline, so any shadow the filter grows outside that
-   outline is exactly what the clip-path then removes: the filter paints a
-   shadow, the clip-path drawn on the same element throws it away one step
-   later. That is "the shadow disappears near a frame" — it never disappears
-   only when merging, it is only generated when merging, on the one element
-   that is guaranteed to clip it back off.
-
-   The fix is to stop asking one element to both own the silhouette AND cast
-   a shadow from it. #mgShadow is a second, unclipped layer: an SVG path
-   carrying the identical contour (the same d string as the fill and the rim,
-   read off the same `dF` this frame), filtered with feDropShadow, and nothing
-   else drawn on top of it. Nothing on #mgShadow is ever clipped, so there is
-   nothing to throw the blur away. It sits one z-index behind #mgFill so the
-   glass paints over the top of its own shadow instead of the shadow riding
-   above the glass.
-
-   Opacity is read off --glass-shadow every slow tick, the same way `spec` is
-   already read off --glass-spec below, so this is driven by the one token
-   instead of a second, hardcoded number that silently drifts from it. */
 #mgShadow{ z-index:289; overflow:visible; }
 #mgFill{ z-index:290; }
 #mgRim{ z-index:291; overflow:visible; }
 @media (hover:none),(pointer:coarse){ #mgShadow,#mgFill,#mgRim{ display:none !important; } }
 
-/* ---------- THE CUTTABLE EDGE LIGHT ----------
-   Every glass surface the cursor can merge with carries its inset lights on a
-   pseudo element instead of on itself. A box-shadow cannot be removed in one
-   region, but a layer can be masked, so the merge writes one custom property,
-   --rim-cut, and the target's own edge light opens a mouth exactly where the
-   neck arrives. Unset, the mask is `none` and the light is whole.
-
-   This shared rule is only the plumbing: content, position, radius, and the
-   mask itself. Each surface's own box-shadow is declared where it always was,
-   below, in ONE GLASS. */
+/* THE CUTTABLE EDGE LIGHT. Every glass surface the cursor can merge with carries its inset
+   lights on a pseudo element instead of on itself. */
 .row::after, .gpill::after, .rail-in::after{
   content:""; position:absolute; inset:0; border-radius:inherit;
   pointer-events:none;
@@ -1093,18 +773,9 @@ h1 em.lit-word{ color:var(--signal); }
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
 }
 
-/* ---------- ONE GLASS ----------
-   The navigation bar is the material. Everything else on the page now wears it,
-   including the card frame: same tint, same two edge lights, same refraction,
-   same chromatic aberration, same brightness. Reach out is still the one
-   surface that differs, and only in colour — its own background overrides this
-   one, nothing else about it does.
-
-   The tint, both edge lights and the refraction are identical everywhere now.
-   The only thing that still varies is how far the drop shadow reaches, because
-   that is a function of how big the object is and how far off the paper it sits:
-   a 48px bead with the rail capsule's 30px shadow reads as a hovering marble.
-   Everything here is a token, so this block is the one place to tune it. */
+/* ONE GLASS. The navigation bar is the material. Everything else on the page now wears it,
+   including the card frame: same tint, same two edge lights, same refraction, same
+   chromatic aberration, same brightness. */
 #cur i,
 .gpill:not(.gpill-blue),
 .dev-rim,
@@ -1115,20 +786,6 @@ h1 em.lit-word{ color:var(--signal); }
     rgba(255,255,255,calc(var(--glass-tint) * 0.10)) 58%,
     rgba(255,255,255,calc(var(--glass-tint) * 0.55)));
 }
-/* .row moved up out of .row::after in the list above, and that swap is the
-   point rather than a tidy-up. The gradient was on the pseudo element while the
-   row itself carried a separate flat 55% white, so a card painted two
-   backgrounds and every other surface painted one. A pill has always been
-   gradient on the element, edge lights on ::after; a row is now the same shape,
-   which also means the merge bridge copies a real tint off it instead of paint.
-   ::after keeps the two edge lights, declared just below. */
-/* #skip used to be listed here and carry its own dedicated box-shadow too,
-   which as an ID selector always outranked .gpill:not(.gpill-blue) regardless
-   of source order, so it would have doubled its own edge lights the moment it
-   became a real .gpill: one set from here, one from .gpill::after. It is a
-   plain .gpill now, in markup, so it gets everything — tint, both edge
-   lights, the contact shadow, the real refraction — from that class the exact
-   same way Replay does, with nothing ID-specific left to disagree with it. */
 .gpill:not(.gpill-blue){
   box-shadow:
     0 1px 1px rgba(22,23,26,.17),
@@ -1140,33 +797,8 @@ h1 em.lit-word{ color:var(--signal); }
     inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
     inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
 }
-/* THE CARD'S REFRACTION: THE STATIC RING NEVER GETS ONE, FULL STOP.
-   AND THIS TIME THE MEASUREMENT ACTUALLY SETTLES IT.
-
-   Three gating strategies were tried across three rounds, always on, viewport
-   proximity, and hover with a debounce scaled to each card's size, and all
-   three were reported laggy on the two full width cards specifically. The
-   finding then was sound: cost is the element's whole box, so no gate makes
-   the sustained cost smaller, it only delays it.
-
-   A round after that gave the card a lens of its own anyway, on the reasoning
-   that shrinking the ramp and later cutting the filter to a single pass would
-   bring the cost down enough to matter. It did not, because the primitive
-   count was never the variable, the region was: a backdrop-filter is priced by
-   the element's whole box no matter how many passes run over it or how few.
-   Measured on the real page, five seconds of scrolling past the two full width
-   tiles, on the Chrome FPS meter: lens off, 116 to 121fps, the display's own
-   ceiling, not one dropped frame in the sample. Lens on, 19 to 53fps, with
-   single digit stalls inside that. Frost alone, the same backdrop-filter with
-   only blur() and no SVG reference, cost nothing measurable either way, so
-   this is not a blur problem, it is the displacement chain on a box this size.
-
-   So the ring's tint, edge light and shadow above are the identical recipe the
-   nav bar uses, and stay that way, unchanged. What it does not carry, ever, is
-   a live filter of its own, not even through the merge bridge: see THE
-   FALLBACK LENS, WITHOUT THE LENS, a few hundred lines below, for why the
-   bridge stopped borrowing the real feDisplacementMap for anything. Cards
-   never get one, full stop, no exception left standing. */
+/* The card's ring never carries a live filter, and neither does the merge bridge over it.
+   See the --card-frost note in the tokens for the measurement. */
 
 
 
@@ -1183,42 +815,8 @@ h1 em.lit-word{ color:var(--signal); }
     0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 2.2));
 }
 
-/* ---------- WHEN THERE IS NO LENS ----------
-   The refraction on this page is an feDisplacementMap referenced from
-   backdrop-filter. That is a Chromium only capability: WebKit bug 245510 is
-   still open and Firefox has never shipped it. Every browser on iOS is WebKit,
-   Chrome for iOS included, so on any iPhone or iPad there is no lens and there
-   never was.
-
-   This used to reach for a second material here: frost bumped from 0 to a
-   real 6px blur, tint bumped from 0.20 to 0.34, specifically for browsers that
-   can't run the filter. That was a second glass recipe living outside the ten
-   LOCKED tokens at the top of the file, triggered by a browser sniff instead
-   of a slider, which is exactly the kind of drift that keeps producing "the
-   cursor's material doesn't match the frame's material" bug reports: there
-   were two materials on the page, not one, and which one you got depended on
-   which engine rendered you.
-
-   --glass-blur stays at 0 here now, same as everywhere else. Frost 0 is the
-   material, full stop, no per-browser exception. The only thing this block
-   still does is null out --glass-filter, and that is not a material choice,
-   it is a correctness fix: a browser that parses backdrop-filter:url() and
-   then silently ignores it (Safari does exactly this) can drop the whole
-   backdrop-filter declaration rather than just that one function, which would
-   take blur, saturate and brightness down with it. Emptying the custom
-   property makes the url() vanish from every declaration that references it
-   before that can happen.
-
-   Two guards, because neither is sufficient alone. @supports catches browsers
-   that reject the syntax, but it tests whether a value parses and not whether
-   it is honoured, and Safari parses backdrop-filter:url() and then ignores it.
-   The html.no-lens class is set by the probe in the head for that case.
-
-   Known tradeoff, kept on purpose rather than patched back in silently: on
-   Safari, Firefox and iOS this reads as a flatter, thinner tint than Chromium,
-   because there is no refraction there to carry the effect and frost is no
-   longer standing in for it. That is the one open question worth a second
-   look, not something this pass decided quietly. */
+/* WHEN THERE IS NO LENS. Only Chromium runs an SVG filter inside backdrop-filter, so
+   --glass-filter is emptied on every other engine and the tint carries the glass alone. */
 @supports not (backdrop-filter: url(#x)){
   :root{ --glass-filter: ; }
 }
@@ -1235,25 +833,27 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   transition:opacity .55s var(--ease);
 }
 #boot.gone{ opacity:0; pointer-events:none; }
-.boot-num{
-  font-family:var(--f-display);
-  font-variation-settings:"wdth" 82,"opsz" 96;
-  font-weight:600;
-  font-size:clamp(78px,18vw,252px);
-  line-height:.72; letter-spacing:-.045em;
+
+/* The readout is monospace, so it needs no webfont and can paint on the first
+   frame instead of waiting for Bricolage the way the old numeral did. */
+.boot-ascii{
+  font-family:ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  font-size:clamp(12px,1.45vw,16px);
+  line-height:1.65;
   color:var(--ink);
-  font-variant-numeric:tabular-nums;
-  display:flex; align-items:baseline;
-  margin-bottom:-.05em;              /* seats the digits on the corner optically */
-  opacity:0; transition:opacity .45s var(--ease);
+  white-space:pre;
 }
-.boot-num.on{ opacity:1; }
-.boot-num i{
-  font-style:normal; color:var(--signal);
-  font-size:.26em; margin-left:.10em; letter-spacing:-.02em;
+.boot-lbl{
+  display:block;
+  font-size:.84em; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--ink-soft);
 }
-.boot-bar{ position:absolute; left:0; right:0; bottom:0; height:2px; background:rgba(22,23,26,.10); }
-.boot-bar span{ display:block; height:100%; width:0; background:var(--signal); }
+/* letter-spacing would put a gap after the last block and break the join with
+   the empty run, so the bar sets none and pays for it in width instead */
+.boot-track{ letter-spacing:0; }
+.boot-fill{ color:var(--signal); }
+.boot-rest{ color:rgba(22,23,26,.18); }
+.boot-pct{ font-variant-numeric:tabular-nums; letter-spacing:.04em; }
 
 /* ---------- prologue ---------- */
 #prologue{
@@ -1273,17 +873,7 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 
 
 
-/* SKIP IS NOW A PLAIN .gpill, THE SAME ONE Replay the intro IS.
-   It used to be its own thing entirely: a 44px circle holding only a chevron,
-   expanding to a 184px labelled capsule on hover, with its own hand-built
-   background, its own box-shadow, and no @supports block giving it the same
-   lens that .gpill's own @supports rule already carries via the class match.
-   None of that is declared here any more; .gpill and .gpill-sm supply the
-   material, the shape, the padding, the two edge lights, the real refraction,
-   and the hover colour, all from the exact same rule Replay uses, because it
-   now matches the exact same selector. All that is left to say here is where
-   on the screen it sits, which is the one genuinely different thing about it:
-   fixed, top right, above the prologue rather than in the footer. */
+/* SKIP IS NOW A PLAIN .gpill, THE SAME ONE Replay the intro IS. */
 #skip{
   position:fixed; top:11px; right:clamp(12px,4vw,68px); z-index:101;
 }
@@ -1295,10 +885,8 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 
 /* ---------- narrow ---------- */
 @media (max-width:900px){
-  /* The rail is a baseline flex with the name at one end and the readout at the
-     other, and the readout is uppercase at .18em, so it is wide for what it
-     says. It shortens before it disappears: at 900 there is room for the field
-     name without the label in front of it. */
+  /* The rail is a baseline flex with the name at one end and the readout at the other, and
+     the readout is uppercase at .18em, so it is wide for what it says. */
   .rail span{ font-size:10px; letter-spacing:.14em; }
   #runway{ height:1100vh; }
 }
@@ -1310,7 +898,6 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   .desc{ font-size:13px; }
   /* a full intro on a thumb is too long a scroll */
   #runway{ height:820vh; }
-  .boot-num{ font-size:clamp(64px,22vw,132px); }
 }
 @media (max-width:720px){
   .foot{ grid-template-columns:1fr; justify-items:center; text-align:center; gap:18px; }
@@ -1322,10 +909,8 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   #runway{ height:640vh; }
 }
 @media (max-width:400px){
-  /* .18em of tracking on an 11px uppercase label is 130px for "Replay the
-     intro", and there are two pills plus a link in a one column footer. The
-     tracking comes off before the type size does, since that is the cheaper of
-     the two in terms of what the footer is for. */
+  /* .18em of tracking on an 11px uppercase label is 130px for "Replay the intro", and there
+     are two pills plus a link in a one column footer. */
   .foot{ font-size:10px; letter-spacing:.10em; padding-left:16px; padding-right:16px; }
   .gpill{ padding:12px 18px; letter-spacing:.13em; }
   .gpill-sm{ padding:10px 14px; letter-spacing:.11em; }
@@ -1335,14 +920,10 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   #runway{ height:560vh; }
   .rail-in{ padding-left:16px; padding-right:16px; }
 }
-/* A LANDSCAPE PHONE IS NOT A NARROW SCREEN, so none of the width rules above
-   reach it: 844x390 is wider than the 720 tier and shorter than everything.
-   The runway is in vh, so it scales down on its own, but 1450 of a 390px
-   viewport is still 5655px of scrolling before the work appears, on the one
-   posture where somebody is most likely holding the phone one handed. */
+/* A LANDSCAPE PHONE IS NOT A NARROW SCREEN, so none of the width rules above reach it:
+   844x390 is wider than the 720 tier and shorter than everything. */
 @media (max-height:560px){
   #runway{ height:700vh; }
-  .boot-num{ font-size:clamp(56px,15vh,120px); }
 }
 /* the ripple and the bead are pointer effects, so they go on touch */
 @media (hover:none){
@@ -1361,20 +942,9 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 <pre id="bgHot" aria-hidden="true"></pre>
 
 <svg id="glassdefs" aria-hidden="true" focusable="false" width="0" height="0">
-  <!-- THE LENS MAP, rebuilt.
-
-       The old ramp went 214 -> 128 -> 42 and stopped there, so displacement was
-       at its MAXIMUM on the rim: 0.337 of full range, which at scale 106 is 36px
-       of throw on a 144px circle. That is what dragged pixels from outside the
-       glass in under the rim and read as a second offset copy, and it is why the
-       lens gave up refraction altogether and ran on saturate(104%) instead.
-
-       Both ramps now open AND close on neutral 128. Throw falls to zero at the
-       rim and peaks just inside it, which is also what a real thick glass edge
-       does. The filter region is the element box exactly, x=0 width=100%, so no
-       pass can sample or paint a pixel outside the shape.
-
-       One filter, on every glass surface, the bead included. -->
+  <!-- THE LENS MAP, rebuilt. The old ramp went 214 -> 128 -> 42 and stopped there, so
+     displacement was at its MAXIMUM on the rim: 0.337 of full range, which at scale 106 is
+     36px of throw on a 144px circle. -->
   <!-- the row rectangle -->
   <filter id="gcA" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
     <feImage preserveAspectRatio="none" result="mx" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='8'><defs><linearGradient id='h' x1='0' y1='0' x2='1' y2='0'><stop offset='0' stop-color='rgb(128,128,128)'/><stop offset='0.055' stop-color='rgb(212,128,128)'/><stop offset='0.27' stop-color='rgb(128,128,128)'/><stop offset='0.73' stop-color='rgb(128,128,128)'/><stop offset='0.945' stop-color='rgb(44,128,128)'/><stop offset='1' stop-color='rgb(128,128,128)'/></linearGradient></defs><rect width='160' height='8' fill='url(%23h)'/></svg>"/>
@@ -1395,15 +965,6 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     <feBlend in="rg" in2="Bd" mode="screen"/>
   </filter>
 
-  <!-- The card ran a lens of its own for a round, a lighter build of #gcA
-       anchored for a 9px rim instead of a whole panel, eventually cut to one
-       displacement pass. All of it removed, not for the geometry, for the
-       cost: a backdrop-filter is priced by the element's whole box no matter
-       how many passes run over it, and even one pass over a 900px card several
-       times a screen measured at 19 to 53fps against 116 to 121fps with it
-       off. See THE CARD LENS, TRIED AND REMOVED, in the tokens at the top for
-       the numbers, and THE CARD'S REFRACTION in the stylesheet for where that
-       decision now lives. -->
 
 
 </svg>
@@ -1425,21 +986,17 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   <div class="hint">ddsd to hide</div>
 </div>
 
-<!-- outside .shell on purpose: .shell is a stacking context at z-index 2, so the
-     preview would paint above the rows' own type from inside it, and .rise
-     carries a transform, which would make this the containing block of a row
-     rather than of the page. -->
+<!-- outside .shell on purpose: .shell is a stacking context at z-index 2, so the preview
+   would paint above the rows' own type from inside it, and .rise carries a transform, which
+   would make this the containing block of a row rather than of the page. -->
 <div id="art" aria-hidden="true">
   <div id="artClip">
     <img id="artShot" alt="" decoding="async" fetchpriority="high">
     <iframe id="artLive" title="" tabindex="-1" scrolling="no" src="about:blank"></iframe>
   </div>
 </div>
-<!-- the merged silhouette's shadow. Unclipped on purpose: this is the whole
-     fix for "the shadow disappears near a frame." See THE SHADOW, ROUND TWO
-     in the stylesheet. The two feDropShadow primitives mirror what used to be
-     two stacked CSS drop-shadow() functions on #mgFill; flood-opacity on both
-     is set from --glass-shadow every frame, not hardcoded. -->
+<!-- the merged silhouette's shadow. Unclipped on purpose: this is the whole fix for "the
+   shadow disappears near a frame." See THE SHADOW, ROUND TWO in the stylesheet. -->
 <svg id="mgShadow" aria-hidden="true" focusable="false" width="0" height="0">
   <defs>
     <filter id="mgShadowBlur" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
@@ -1458,30 +1015,7 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
         <feMergeNode in="mgShadow2"/>
       </feMerge>
 
-      <!-- THE SHADOW, ROUND THREE. THIS IS THE MUD FIX.
-           Rounds one and two argued about WHICH ELEMENT should cast the shadow.
-           Both got the geometry right and the compositing wrong, and the bug
-           that survived both is this: a drop shadow was being painted across
-           the INTERIOR of the very shape casting it.
-
-           That is invisible on an opaque object, because the object covers its
-           own shadow. Every surface here is glass. #mgFill is deliberately the
-           merged silhouette MINUS the target's own rectangle (see the comment
-           in the stylesheet), so over the nav bar, over a pill, over a card,
-           there is a region where this blurred black contour is painted and
-           NOTHING opaque is painted on top of it. The bead sits at z-index 300
-           with an interior alpha of about 0.02, so it does not cover that
-           black, it shows it. That is the muddy cursor, in one primitive.
-
-           Measured, bead parked on the nav bar, interior versus the same pixels
-           with the bead moved away: -52.4 with this filter as it was, -1.5 with
-           #mgShadow display:none. One element accounted for 51 of the 52 points.
-
-           operator="out" against the unblurred SourceAlpha is the fix and it is
-           also just the definition of a drop shadow: keep the blurred flood
-           only where the caster ISN'T. Nothing changes outside the silhouette,
-           which is the whole part anyone was ever meant to see, and inside it
-           the shadow is now exactly zero rather than nearly opaque black. -->
+      <!-- THE SHADOW, ROUND THREE. THIS IS THE MUD FIX. -->
       <feComposite in="mgShAll" in2="SourceAlpha" operator="out"/>
     </filter>
   </defs>
@@ -1498,11 +1032,7 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     </linearGradient>
     <clipPath id="mgClip"><path id="mgClipPath" d=""></path></clipPath>
   </defs>
-  <!-- Two strokes, one contour. mgRimPath is the dim ring the whole silhouette
-       carries; mgRimLit is the brighter light on the arcs whose outward normal
-       faces the light, which is the same recipe the panes wear as
-       `inset 0 0 0 1px` plus `inset 0 1px 0`. They never overlap: a segment
-       belongs to one or the other, so nothing blows out where they meet. -->
+  <!-- Two strokes, one contour. -->
   <path id="mgRimPath" d="" fill="none" stroke="url(#mgGrad)" stroke-width="2"
         stroke-linecap="round" stroke-linejoin="round"
         clip-path="url(#mgClip)"></path>
@@ -1513,8 +1043,7 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 <div id="cur" aria-hidden="true"><i></i></div>
 
 <div id="boot" role="status" aria-label="Loading">
-  <div class="boot-num" id="bootNum" aria-hidden="true"><span id="bootN">0</span><i>%</i></div>
-  <div class="boot-bar"><span id="bootBar"></span></div>
+  <div class="boot-ascii" aria-hidden="true"><span class="boot-lbl"><span id="bootLbl">Refracting field</span><span id="bootDots">...</span></span><span class="boot-track"><span class="boot-fill" id="bootFill"></span><span class="boot-rest" id="bootRest"></span></span> <span class="boot-pct" id="bootPct">0%</span></div>
 </div>
 
 <button id="skip" class="gpill gpill-sm" type="button">Skip to work</button>
@@ -1533,7 +1062,19 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   <header class="rail" id="rail">
     <div class="rail-in">
       <b>Anshul Patria</b>
-      <span>now drawing <em id="fieldTag">contour field</em></span>
+      <div class="rail-end">
+        <button id="mute" class="mute" type="button" aria-pressed="false" aria-label="Mute sound" title="Mute sound">
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path class="mute-cone" d="M3 6h2l3-2.6v9.2L5 10H3z"/>
+            <g class="mute-on">
+              <path d="M10.4 5.6a3.4 3.4 0 0 1 0 4.8"/>
+              <path d="M12.3 3.7a6 6 0 0 1 0 8.6"/>
+            </g>
+            <g class="mute-off"><path d="M10.8 6.2l3.4 3.6M14.2 6.2l-3.4 3.6"/></g>
+          </svg>
+        </button>
+        <span>now drawing <em id="fieldTag">contour field</em></span>
+      </div>
     </div>
   </header>
 
@@ -1563,20 +1104,14 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 </div>
 
 <script>
-/* ============================================================
-   0. LOADER
-   Wired to real work, not a timer. Weighted milestones: fonts are
-   the heaviest because they are the only sizeable external fetch
-   and the counter itself is set in one of them.
-   The bar paints immediately since it needs no font. The numeral
-   waits for Bricolage so the first thing on screen is not a
-   fallback face swapping under the reader.
-   ============================================================ */
+/* 0. LOADER */
 const Boot = (function(){
-  const el  = document.getElementById("boot");
-  const num = document.getElementById("bootN");
-  const bar = document.getElementById("bootBar");
-  const wrap= document.getElementById("bootNum");
+  const el   = document.getElementById("boot");
+  const fill = document.getElementById("bootFill");
+  const rest = document.getElementById("bootRest");
+  const pctE = document.getElementById("bootPct");
+  const lbl  = document.getElementById("bootLbl");
+  const dots = document.getElementById("bootDots");
   if (!el) return { set(){} };
 
   if ("scrollRestoration" in history) history.scrollRestoration = "manual";
@@ -1584,7 +1119,26 @@ const Boot = (function(){
   const W = { dom: 16, font: 54, win: 30 };            /* sums to 100 */
   const M = { dom: 0, font: 0, win: 0 };
   let target = 0, shown = 0, ended = false;
-  const t0 = performance.now(), MIN = 950, MAX = 7000;
+  const t0 = performance.now(), MIN = 3400, MAX = 8000;
+  /* THE PACING. A bar that climbs at a constant rate reads as a progress bar and
+     nothing else. This is the shape of anticipation instead: quick off the mark,
+     then two hesitations where it almost stalls, then the last stretch. It is a
+     floor on the pace, never a cap on the truth, because the real milestones are
+     still the other half of the Math.min below and 100% cannot be shown before
+     the work is actually done. Pairs are [elapsed fraction, progress]. */
+  const PACE = [[0,0],[0.14,0.31],[0.28,0.38],[0.52,0.71],[0.68,0.77],[0.86,0.94],[1,1]];
+  function paced(u){
+    if (u <= 0) return 0;
+    if (u >= 1) return 1;
+    for (let i = 1; i < PACE.length; i++){
+      const [bu, bp] = PACE[i];
+      if (u <= bu){
+        const [au, ap] = PACE[i - 1];
+        return ap + (bp - ap) * ((u - au) / (bu - au));
+      }
+    }
+    return 1;
+  }
 
   function recompute(){ let t = 0; for (const k in M) t += M[k]*W[k]; target = t/100; }
   function set(k, v){ if (k in M){ M[k] = Math.max(M[k], v); recompute(); } }
@@ -1593,22 +1147,43 @@ const Boot = (function(){
   addEventListener("DOMContentLoaded", () => set("dom", 1));
   addEventListener("load", () => set("win", 1));
 
-  const reveal = () => wrap && wrap.classList.add("on");
-  if (document.fonts && document.fonts.ready){
-    document.fonts.ready.then(() => set("font", 1));
-    document.fonts.load('600 1em "Bricolage Grotesque"').then(reveal, reveal);
-  } else { set("font", 1); reveal(); }
-  setTimeout(reveal, 1400);                       /* never sit on a blank screen */
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => set("font", 1));
+  else set("font", 1);
   setTimeout(() => { for (const k in M) M[k] = 1; recompute(); }, MAX);
+
+  /* Read off the bar, not off the milestones. On a warm cache every milestone
+     lands in the first 200ms, so a report of outstanding work would sit on the
+     last line for three seconds; this walks with what is on screen. */
+  function phase(u){
+    if (u < 0.34) return "Parsing document";
+    if (u < 0.72) return "Loading faces";
+    if (u < 0.97) return "Refracting field";
+    return "Ready";
+  }
+
+  const CELLS = 24;
+  let lastN = -1, lastPct = -1, lastPhase = "", lastDots = -1;
 
   (function loop(){
     /* a floor on elapsed time, so a warm cache still reads as a count */
-    const goal = Math.min(target, (performance.now() - t0) / MIN);
+    const goal = Math.min(target, paced((performance.now() - t0) / MIN));
     shown += (goal - shown) * 0.14;
     if (goal >= 1 && shown > 0.9985) shown = 1;
+
     const pct = Math.min(100, Math.round(shown * 100));
-    if (num) num.textContent = String(pct);
-    if (bar) bar.style.width = (shown * 100).toFixed(2) + "%";
+    const n   = Math.round(shown * CELLS);
+    /* every write here invalidates the layer, so each one is gated on the value
+       actually changing: 24 cells and 101 percentages, not 60 writes a second */
+    if (n !== lastN && fill && rest){
+      lastN = n;
+      fill.textContent = "\u2588".repeat(n);
+      rest.textContent = "\u2591".repeat(CELLS - n);
+    }
+    if (pct !== lastPct && pctE){ lastPct = pct; pctE.textContent = pct + "%"; }
+    const ph = phase(shown);
+    if (ph !== lastPhase && lbl){ lastPhase = ph; lbl.textContent = ph; }
+    const d = Math.floor((performance.now() - t0) / 260) % 4;
+    if (d !== lastDots && dots){ lastDots = d; dots.textContent = ".".repeat(d); }
 
     if (shown >= 1 && !ended){
       ended = true;
@@ -1627,13 +1202,7 @@ const Boot = (function(){
 })();
 
 
-/* ============================================================
-   PROJECTS, ordered as the voyage
-   Rows run in voyage order and each carries its creature, but the
-   episodes are never named. The myth stays implicit.
-   0 idle  1 metaballs  2 line grid  3 pinscreen
-   4 gravity wells  5 flow dashes  6 fluid  7 registration marks
-   ============================================================ */
+/* PROJECTS, ordered as the voyage */
 const PROJECTS = [
   { ord:"I", plate:"lotus", field:4,
     name:"Gravity Pong", focus:0.50, url:"https://anshulpatria.github.io/gravitypong/", input:"Keys", type:"Game",
@@ -1691,27 +1260,22 @@ const PROJECTS = [
     thumb:"shots/artboard-42", w:[760,1500], pos:"center",
     span:6, ar:"4 / 5" }
 ];
-/* ============================================================
-   2. THE WORLD
-   Signed distance fields, one per creature. Two things matter here
-   beyond the shapes:
-
-   COV  every creature writes its own coverage. The compositor uses
-        painter's order, so clouds can genuinely hide the lotus and
-        a flask rim can hide what is behind it. Without this the
-        parting and the mouth entry are impossible.
-
-   P    a control object, so the choreography drives blooming,
-        blinking, parting, tilting and view angle directly.
-   ============================================================ */
+/* 2. THE WORLD */
 const BUILD = "b590115";
 console.log("%c" + BUILD, "font:700 14px monospace;color:#2B2BEE");
-/* The LENS object that used to live here — the row-lens's own tracked
-   rectangle — went with the row lens itself (see THE ROW LENS THAT USED TO
-   LIVE HERE IS GONE, in the cursor module). Nothing reads it any more; it was
-   declared and never touched again. Removed rather than left as a decoy for
-   the next person who greps for "lens" wondering what still uses it. */
 const RAMP = " .:-=+*#%@";
+/* ONE ALPHABET PER FIELD, INDEXED THE SAME WAY THE FIELDS ARE. */
+const RAMPS = [
+  " .:-=+*#%@",   /* 0 idle contours, the baseline */
+  " .:coaO08@",   /* 1 metaballs, round */
+  " .':i|!I#@",   /* 2 line grid, strokes */
+  " .,;i!|X#@",   /* 3 pin art, upright needles */
+  " .:-~=+o0@",   /* 4 gravity wells, rings */
+  null,           /* 5 compass, drawn by needle() */
+  " .,:~=coO@",   /* 6 fluid, soft */
+  " .:+x*X#%@",   /* 7 registration marks, crosses */
+  " .:oO=+*#@"    /* 8 agent graph, nodes and wire */
+];
 let COV = 1;                       /* scratch, avoids allocating per cell */
 
 const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x-a)/(b-a))); return t*t*(3-2*t); };
@@ -1988,17 +1552,7 @@ const CREATURE = {
 };
 
 
-/* ============================================================
-   1. THE GROUND, IN CHARACTERS
-   The eight hover fields, ported from the shader so the index is
-   made of the same material as the intro. Every line width is
-   expressed against CW, the height of one character cell, because
-   a threshold tuned for a 0.0006 pixel disappears completely at a
-   0.033 cell. That single conversion is the whole port.
-
-   Each field takes local coords plus the pointer and returns
-   [ink, accent]. Accent decides which colour layer it lands in.
-   ============================================================ */
+/* 1. THE GROUND, IN CHARACTERS */
 let CW = 0.033;                                  /* one cell, in y units */
 
 function fbm3(x, y){
@@ -2121,22 +1675,7 @@ const FIELD = [
     return [Math.min(1, ink + rm)*0.95, rm];
   },
 
-  /* 5. Field : compass needles, and they report which way they point.
-     Three things were making this read as scattered characters rather than as a
-     field, and none of them was the character set.
-
-     One, the angle was computed here and then dropped on the floor: only
-     coverage came back, so the renderer had nothing to draw a direction with.
-     It is returned now, as a third value.
-
-     Two, the swing to the pointer was a straight lerp between two angles. When
-     the gap was more than half a turn the needle rotated the long way round, so
-     two neighbouring cells whose resting noise differed by a hair would swing in
-     opposite directions and cross. It takes the short way now.
-
-     Three, there was no drop off at all. Every cell held a dash at the same
-     strength to the edges of the screen, which is a texture, not a field. The
-     needles are strongest under the pointer and fall away from it. */
+  /* 5. Field : compass needles, and they report which way they point. */
   function (x, y, mx, my, tS, ms){
     const cs = 0.085;
     const ix = Math.floor(x/cs), iy = Math.floor(y/cs);
@@ -2156,16 +1695,13 @@ const FIELD = [
     const dx = Math.cos(ang), dy = Math.sin(ang), hl = cs*0.44;
     const along = Math.max(-hl, Math.min(hl, qx*dx + qy*dy));
     const dist = Math.hypot(qx - dx*along, qy - dy*along);
-    /* The solid core has to be at least one character across or nothing ever
-       samples it: at CW*0.20 the core was four tenths of a cell tall, so almost
-       every lit cell fell in the soft edge, came back under the dust threshold,
-       and printed a dot. That, not the character set, is why it read as specks. */
+    /* The solid core has to be at least one character across or nothing ever samples it: at
+       CW*0.20 the core was four tenths of a cell tall, so almost every lit cell fell in the
+       soft edge, came back under the dust threshold, and printed a dot. */
     const cov = 1 - sstep(CW*0.50, CW*1.10, dist);
 
-    /* THE DROP OFF IS IN THE WEIGHT, NOT IN WHETHER THE NEEDLE EXISTS.
-       Fading the magnitude towards zero simply deleted three cells in ten and
-       read as a loss of resolution. Every cell keeps its needle; the ones near
-       the pointer are heavier, so the falloff is legible without costing ink. */
+    /* THE DROP OFF IS IN THE WEIGHT, NOT IN WHETHER THE NEEDLE EXISTS. Fading the magnitude
+       towards zero simply deleted three cells in ten and read as a loss of resolution. */
     const near = Math.exp(-Math.hypot(tox, toy)*1.8);
     return [cov * Math.min(1, 0.58 + 0.42*(near + infl)), infl, ang];
   },
@@ -2244,30 +1780,8 @@ function rim(d, w){ return 1 - sstep(w*0.45, w, Math.abs(d)); }
 /* ------------------------------------------------------------
    the background surface
    ------------------------------------------------------------ */
-/* ORIENTATION, NOT JUST BRIGHTNESS.
-   A field that has a direction was being flattened to one number and then looked
-   up in the density ramp, so the character said how dark the cell was and never
-   which way the needle pointed. Two needles 60 degrees apart got the same glyph
-   whenever their coverage matched, and that is what reads as randomly assembled
-   characters.
-
-   The character now carries the angle. Same characters as before, chosen for the
-   shape they draw inside the cell rather than for their weight:
-
-     -  =    a bar across the cell        flat
-     .  :    one dot, two stacked         upright
-     +  *    a crossing, a burst          the diagonals
-
-   Sixty degrees each, so no orientation is favoured. This set has no diagonal
-   stroke, which is its one real limit: put "|", "/" and "\\" in and the same
-   function gives eight true directions instead of three. */
-/* v here is the field's OWN magnitude, 0 to 1, not the faded value.
-   Getting that wrong is what wrecked the definition: the renderer multiplies by
-   calm * 0.66 before drawing, so the number that reached this function topped out
-   at 0.66 and sat far below that over most of the page. Thresholds written for a
-   0..1 range therefore pushed the majority of cells into the "." branch, and a
-   page of single dots is exactly the dust it was supposed to avoid. The fade now
-   decides only whether a cell paints; the character comes from the field. */
+/* ORIENTATION, NOT JUST BRIGHTNESS. */
+/* v here is the field's OWN magnitude, 0 to 1, not the faded value. */
 function needle(ang, v){
   /* Measured: at 0.22 the dot tier took 7% of the ink, at 0.10 it takes 1%. The
      edge cells belong to the same stroke at the same angle, so giving them the
@@ -2284,18 +1798,22 @@ function needle(ang, v){
 const Ground = (function(){
   const ink = document.getElementById("bgInk");
   const hot = document.getElementById("bgHot");
-  if (!ink || !hot) return { to(){} };
+  /* Both halves of the module's surface, not just to(). */
+  if (!ink || !hot) return { to(){}, at: () => [0, 0] };
 
   let modeA = 0, modeB = 0, mixT = 1, mixStart = 0;
   const MIXMS = 520;
+  /* WHERE THE CHANGE STARTS FROM. The fade used to be one scalar applied to every cell at
+     once, so a new field arrived everywhere simultaneously and came from nowhere in
+     particular. */
+  let oxW = 0, oyW = 0;
+  /* THE FRONT IS SOFT AND IT IS RAGGED, FOR TWO DIFFERENT REASONS. BAND is the width of the
+     transition, in y units, so the front is a gradient rather than a line. */
+  const BAND = 0.20, JIT = 0.13;
   let hovering = false, lastMove = -1e9, strength = 0;
   let mx = -9, my = -9;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const easeIO = u => u < 0.5 ? 4*u*u*u : 1 - Math.pow(-2*u + 2, 3)/2;
 
-  /* This used to clearTimeout and setTimeout a 1400ms idle timer on every
-     pointermove, which on a 125Hz mouse is 250 timer operations a second to
-     answer a question the 10fps tick can answer from a timestamp. */
   addEventListener("pointermove", e => {
     const vw = innerWidth, vh = innerHeight;
     mx = (e.clientX - vw*0.5) / vh;
@@ -2303,11 +1821,21 @@ const Ground = (function(){
     lastMove = e.timeStamp;
   }, { passive:true });
 
-  function to(m){
+  /* ox, oy are optional and in field coordinates. Omit them and the wipe keeps
+     whatever origin it had, which is what the idle return wants when it fires
+     from a timer with no pointer event behind it. */
+  /* Returns whether a wipe actually started, so callers can tie a sound or any
+     other one-shot to a real transition rather than to every hover. */
+  function to(m, ox, oy){
     hovering = m !== 0;
-    if (m === modeA && mixT >= 1) return;
-    if (mixT < 1) modeA = modeB;
+    if (m === modeA && mixT >= 1) return false;
+    /* WHICH FIELD THE INTERRUPTED WIPE FALLS BACK TO. */
+    if (mixT < 1 && mixT > 0.45) modeA = modeB;
     modeB = m; mixT = 0; mixStart = performance.now();
+    if (ox !== undefined){ oxW = ox; oyW = oy; }
+    /* REDUCED MOTION GETS THE NEW FIELD, NOT THE JOURNEY TO IT. */
+    if (reduce){ modeA = m; mixT = 1; }
+    return true;
   }
 
   let ratio = 0.6;
@@ -2333,31 +1861,16 @@ const Ground = (function(){
 
   const t0 = performance.now();
   let last = 0, rowsA = [], rowsB = [], parity = 0, gridKey = "";
-  /* On touch every row now carries an always-on backdrop-filter, so each redraw
-     of this grid forces every slab to re-blur. Half the rate is half that work,
-     and on an ambient texture read through a 6px frost it is not something you
-     can see. */
+  /* On touch every row now carries an always-on backdrop-filter, so each redraw of this
+     grid forces every slab to re-blur. */
   const AMBIENT = matchMedia("(hover:none)").matches ? 260 : 160;
+  /* THE RATE WHILE SOMETHING IS ACTUALLY CHANGING. AMBIENT is an ambient texture's rate and
+     it is correct for one: nothing on screen is moving fast enough at 0.20 opacity to need
+     better. */
+  const BUSY = 55;
 
-  /* THE GROUND IS EVERY GLASS SURFACE'S INPUT, SO IT CANNOT REDRAW MID SCROLL.
-     A backdrop-filter is not a texture that gets rasterized once. It is a read
-     of everything painted behind the element, filtered, and it re-runs on every
-     invalidation of that backdrop. Writing these two <pre> elements invalidates
-     the backdrop of the nav bar, both pills, the bead and every card on screen
-     at once, so a tick that costs 3ms of field evaluation can cost tens of
-     milliseconds of re-filtering downstream of it.
-
-     Scrolling already forces that re-filter on its own, because #bgInk and
-     #bgHot are position:fixed and the cards are not, so the content behind a
-     card is different content every frame and no result can be reused. Landing
-     an ambient redraw on top of that is the one moment it is guaranteed to be
-     felt. So the ground holds still while a scroll is in flight and picks up
-     120ms after it stops. `last` is deliberately not touched here, so the first
-     frame after a scroll ends redraws immediately rather than waiting out the
-     rest of the interval.
-
-     Nothing about the texture's look changes: it is an ambient field at 0.20
-     opacity, and it freezes only while the page is moving underneath it. */
+  /* THE GROUND IS EVERY GLASS SURFACE'S INPUT, SO IT CANNOT REDRAW MID SCROLL. A backdrop-
+     filter is not a texture that gets rasterized once. */
   let lastScroll = -1e9;
   addEventListener("scroll", () => { lastScroll = performance.now(); }, { passive:true });
   const SCROLL_HOLD = 120;
@@ -2368,13 +1881,10 @@ const Ground = (function(){
 
   (function tick(now){
     requestAnimationFrame(tick);
-    if (now - last < AMBIENT) return;            /* ambient, not a frame rate */
+    if (now - last < (mixT < 1 ? BUSY : AMBIENT)) return;
     if (now - lastScroll < SCROLL_HOLD) return;  /* see THE GROUND IS EVERY... */
     last = now;
-    /* The loader and the intro are both opaque fullscreen white layers. This
-       grid was being evaluated and written into two full screen <pre> elements
-       behind them, at exactly the moment the intro's own render loop wants the
-       main thread. Nothing behind an opaque layer needs drawing. */
+    /* The loader and the intro are both opaque fullscreen white layers. */
     const cl = document.documentElement.classList;
     if (cl.contains("booting") || cl.contains("intro")){ gridKey = ""; return; }
 
@@ -2386,24 +1896,11 @@ const Ground = (function(){
     strength += (target - strength) * (reduce ? 1 : 0.10);
 
     const vw = innerWidth, vh = innerHeight;
-    /* RESOLUTION.
-       This was a flat 126 columns at every width above 640, so the character cell
-       was 10px on a laptop and 20px on a wide display: the field got coarser the
-       bigger the screen, which is the resolution ceiling. It is a target cell
-       size now, so the grain is the same everywhere.
-
-       The ceiling that remains is real work, not an arbitrary number. Measured on
-       this machine the dearest field costs about 1.5us a cell, so a grid is held
-       under BUDGET cells and paid for by interleaving: each tick recomputes every
-       other row and keeps the rest from the tick before. At 10fps the older half
-       is 100ms stale on an ambient texture, which is not visible, and it buys
-       twice the grid for the same work per frame. */
+    /* RESOLUTION. */
     const CELL = 7.4;
     let C = Math.max(84, Math.round(vw / CELL));
-    /* The ceiling is set so a tick never costs more than the old 126 column grid
-       did. That grid evaluated 5418 cells every tick, and twice that mid fade.
-       Interleaved, this one evaluates half its cells per tick, so the same work
-       per frame buys a grid twice as large. */
+    /* The ceiling is set so a tick never costs more than the old 126 column grid did. That
+       grid evaluated 5418 cells every tick, and twice that mid fade. */
     const BUDGET = 10800;
     let R = Math.max(6, Math.round(vh / ((vw / C) / ratio)));
     if (C * R > BUDGET){
@@ -2414,10 +1911,9 @@ const Ground = (function(){
     const ax = vw / vh;
     CW = 1 / R;
     const fs = cw / ratio;
-    /* These two were written on every tick, and a style write on a full screen
-       <pre> invalidates its layout whether or not the value changed, which then
-       invalidates the backdrop of everything reading through it. They only ever
-       change on a resize, so they are written on a resize. */
+    /* These two were written on every tick, and a style write on a full screen <pre>
+       invalidates its layout whether or not the value changed, which then invalidates the
+       backdrop of everything reading through it. */
     const lhu = (vh / R / fs).toFixed(4);          /* unitless, not the px lh above */
     if (fs !== lastFs || lhu !== lastLh){
       lastFs = fs; lastLh = lhu;
@@ -2429,18 +1925,23 @@ const Ground = (function(){
 
     const t = (now - t0)/1000;
     const A = FIELD[modeA], B = FIELD[modeB];
-    const blend = mixT >= 1 ? 0 : easeIO(mixT);
+    /* the alphabet travels with the field, so a cell the front has passed is drawn in the
+       incoming field's characters and one it has not is still in the outgoing field's. */
+    const RA = RAMPS[modeA] || RAMP, RB = RAMPS[modeB] || RAMP;
+    /* THE FRONT, ONCE PER TICK. The wipe is a circle growing from the origin, so the only
+       per tick number it needs is that circle's radius. */
+    const fading = mixT < 1;
+    let front = 0;
+    if (fading){
+      const maxD = Math.hypot(Math.abs(oxW) + ax*0.5, Math.abs(oyW) + 0.5);
+      front = (maxD + BAND + JIT*0.5) * mixT;
+    }
     /* the idle field keeps its original hard top fade, the project fields
        get a softer one so they are not erased above the fold */
     const fadeA = modeA === 0 ? [0.06, 0.74] : [0.62, 1.00];
     const fadeB = modeB === 0 ? [0.06, 0.74] : [0.62, 1.00];
 
-    /* Only a new grid has to be drawn whole. Forcing a full grid while a mode
-       crossfaded was costing 51ms tasks: during a fade every cell evaluates BOTH
-       fields, so full plus blended is four times the work of a normal tick. The
-       fade interleaves like everything else now. Each row still refreshes every
-       200ms across a 520ms fade, which on an ambient texture at 0.11 opacity is
-       not something you can see. */
+    /* Only a new grid has to be drawn whole. */
     const key = C + "x" + R;
     const full = key !== gridKey;
     if (key !== gridKey){ gridKey = key; rowsA.length = 0; rowsB.length = 0; }
@@ -2454,27 +1955,48 @@ const Ground = (function(){
       const top = sy + 0.5;
       const cA = 1 - sstep(fadeA[0], fadeA[1], top);
       const cB = 1 - sstep(fadeB[0], fadeB[1], top);
-      const calm = cA + (cB - cA)*blend;
+      const dy = sy - oyW;
       const a = new Array(C), b = new Array(C);
       for (let i = 0; i < C; i++){
         const sx = (i/(C - 1) - 0.5)*ax;
-        let v, acc, ang;
-        const ra = A(sx, sy, mx, my, t, strength, ax);
-        if (blend > 0.001){
+        /* HOW FAR THIS CELL IS THROUGH THE CHANGE, 0 still A and 1 now B.
+           Settled, this is 1, and B is modeB is modeA, so the cell evaluates
+           one field exactly as it always did. */
+        let bl = 1;
+        if (fading){
+          const dx = sx - oxW;
+          const d = Math.hypot(dx, dy) + (h21(i*0.137, j*0.219) - 0.5)*JIT;
+          bl = 1 - sstep(front - BAND, front, d);
+        }
+        let v, acc, ang, ramp;
+        /* THIS IS WHY THE WIPE IS CHEAPER THAN THE CROSSFADE IT REPLACED. A scalar fade put
+           every cell between the two fields, so mid fade the whole grid evaluated both. */
+        if (bl >= 0.998){
+          const r = B(sx, sy, mx, my, t, strength, ax);
+          v = r[0]; acc = r[1]; ang = r[2]; ramp = RB;
+        } else if (bl <= 0.002){
+          const r = A(sx, sy, mx, my, t, strength, ax);
+          v = r[0]; acc = r[1]; ang = r[2]; ramp = RA;
+        } else {
+          const ra = A(sx, sy, mx, my, t, strength, ax);
           const rb = B(sx, sy, mx, my, t, strength, ax);
-          v = ra[0] + (rb[0] - ra[0])*blend;
-          acc = ra[1] + (rb[1] - ra[1])*blend;
-          /* an angle cannot be averaged with a field that has none, so it comes
-             from whichever of the two is currently the louder */
-          ang = blend > 0.5 ? rb[2] : ra[2];
-        } else { v = ra[0]; acc = ra[1]; ang = ra[2]; }
+          v = ra[0] + (rb[0] - ra[0])*bl;
+          acc = ra[1] + (rb[1] - ra[1])*bl;
+          /* an angle cannot be averaged with a field that has none, and neither
+             can an alphabet, so inside the band both come from whichever side
+             this cell already leans to */
+          const lean = bl > 0.5;
+          ang = lean ? rb[2] : ra[2];
+          ramp = lean ? RB : RA;
+        }
+        const calm = cA + (cB - cA)*bl;
         const raw = v;                 /* the field's own magnitude, before the fade */
         v *= calm * 0.66;
         if (v < 0.055){ a[i] = " "; b[i] = " "; continue; }
         /* a field that reports an angle is drawn by its angle. Every other field
            is untouched and still reads straight off the density ramp. */
         const ch = ang === undefined
-          ? RAMP[Math.max(1, Math.min(9, Math.round(v*9)))]
+          ? ramp[Math.max(1, Math.min(9, Math.round(v*9)))]
           : needle(ang, raw);
         if (acc > 0.30){ b[i] = ch; a[i] = " "; }
         else { a[i] = ch; b[i] = " "; }
@@ -2486,16 +2008,906 @@ const Ground = (function(){
     if (outB !== wroteB){ hot.textContent = outB; wroteB = outB; }
   })(performance.now());
 
-  return { to };
+  /* at() hands back the pointer in field coordinates. The conversion from client
+     pixels already happens in the pointermove handler above and nothing outside
+     needs to repeat it, or to read layout to find out where the cursor is. */
+  return { to, at: () => [mx, my] };
 })();
 
 
-/* ============================================================
-   3. PREVIEWS
-   The ASCII plate is instant and never fails, so it is what you see
-   first. Linger and the real project boots behind it and takes over.
-   "ascii" plate only, "live" plate then iframe, "off" no panel.
-   ============================================================ */
+/* 2b. SOUND
+   Three things only, and no more: the ambient bed, the glass tile, and the
+   haptic pulse the cursor makes while the intro is on screen.
+
+     zung(x, soft)  a tile. soft is the leaving half, resonance without attack
+     detent(v)      one haptic pulse, cursor driven, intro only
+
+   The project-opening run and the field-change noise cloud that used to live
+   here are gone: with the tile and the pulses both running they stacked into
+   everything sounding at once.
+
+   Buses: sfx at 0.5 and music at 0.75 of full, both under one mute. Nothing can
+   start before the first real gesture, which is browser policy, not a choice. */
+const Sfx = (function(){
+  const KEY = "mx30-sound";
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const MUSIC_URL = "ambient.mp3";
+  /* 0.75 -> 0.375 -> 0.2625, so a bit over a third of where it started. The bed
+     is meant to be the room, not an event: if you can name the track while
+     reading, it is too loud. */
+  const MUSIC_GAIN = 0.2625;
+  const SFX_GAIN = 0.5;
+
+  /* WHICH VOICE IS FITTED.
+     Change these two strings, or press shift+S in the page to audition all of
+     them live; the choice is remembered in localStorage.
+
+       GLASS  "veil"  breath over a cold pane, the softest, no strike at all
+              "zung"  the same body excited, low Q, a dull knock with a tail
+              "sheen" light grazing an edge, airy and high, almost nothing
+              "field" no discrete hits whatsoever: one continuous pad that
+                      swells while the cursor works and settles when it stops
+
+       TAP    "tick"  dry and precise, no low end, a mechanical detent
+              "thock" transient plus one cycle of mass, closest to a Taptic tap
+              "grain" all noise, a ratchet tooth, the most neutral
+              "hush"  barely audible, for when the tick is already too much   */
+  let GLASS = "veil";
+  let TAP   = "thock";
+  try {
+    const g = localStorage.getItem("mx30-glass"); if (g) GLASS = g;
+    const t = localStorage.getItem("mx30-tap");   if (t) TAP = t;
+  } catch (e) {}
+
+  let muted = false;
+  try { muted = localStorage.getItem(KEY) === "off"; } catch (e) {}
+
+  let ctx = null, master = null, sfxBus = null, musicBus = null, warm = null, verb = null;
+  let noiseBuf = null, musicOn = false, musicEl = null, musicSrc = null;
+  let lastDetent = -1e9, density = 0, densityAt = 0;
+
+  function build(){
+    if (ctx || !AC) return ctx;
+    try { ctx = new AC(); } catch (e) { return null; }
+    master = ctx.createGain();
+    master.gain.value = muted ? 0 : 1;
+    master.connect(ctx.destination);
+    sfxBus = ctx.createGain();   sfxBus.gain.value = SFX_GAIN;  sfxBus.connect(master);
+    musicBus = ctx.createGain(); musicBus.gain.value = 0;       musicBus.connect(master);
+    /* one shelf over everything synthesised, so nothing can turn brittle no
+       matter how many hits overlap. Higher than it was because "sheen" lives
+       above the old ceiling; every voice sets its own top end anyway. */
+    warm = ctx.createBiquadFilter();
+    warm.type = "lowpass"; warm.frequency.value = 9500; warm.Q.value = 0.4;
+    warm.connect(sfxBus);
+
+    const n = Math.floor(ctx.sampleRate);
+    noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random()*2 - 1;
+
+    /* THE SHARED TAIL, AND WHY IT IS THE WHOLE TRICK.
+       Every glass voice sends a little of itself here. One tail shared by all of
+       them is what makes a fast sweep read as one lit object rather than as a
+       list of separate events: hit fifteen tiles in a second and you do not hear
+       fifteen sounds, you hear the same body still ringing from the first while
+       the fifteenth arrives. Taps deliberately send nothing, because a haptic
+       with a tail is no longer a haptic.
+
+       The impulse is a dark exponential decay, generated rather than loaded, so
+       there is still exactly one binary file next to this page. */
+    try {
+      const cv = ctx.createConvolver();
+      const secs = 2.4, len = Math.floor(ctx.sampleRate * secs);
+      const ir = ctx.createBuffer(2, len, ctx.sampleRate);
+      for (let ch = 0; ch < 2; ch++){
+        const a = ir.getChannelData(ch);
+        let lp = 0;
+        for (let i = 0; i < len; i++){
+          /* a one pole lowpass on the noise: without it the tail hisses */
+          lp += ((Math.random()*2 - 1) - lp) * 0.17;
+          a[i] = lp * Math.pow(1 - i/len, 2.6);
+        }
+      }
+      cv.buffer = ir;
+      verb = ctx.createGain(); verb.gain.value = 1;
+      const wet = ctx.createGain(); wet.gain.value = 0.95;
+      verb.connect(cv).connect(wet).connect(sfxBus);
+    } catch (e) { verb = null; }
+    return ctx;
+  }
+
+  function arm(){
+    if (!build()) return;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    music();
+  }
+  for (const ev of ["pointerdown", "keydown", "touchstart"])
+    addEventListener(ev, arm, { once:true, passive:true });
+
+  function withCtx(fn){
+    if (muted || !build()) return;
+    if (ctx.state === "running"){ fn(ctx); return; }
+    ctx.resume().then(() => {
+      if (!muted && ctx.state === "running") fn(ctx);
+    }).catch(() => {});
+  }
+
+  /* ============================ THE MATERIAL ============================
+
+     TWO RULES, AND EVERYTHING BELOW FOLLOWS FROM THEM.
+
+     1. NOTHING MAY HAVE A PITCH. No oscillator carries the sound, there is no
+        note table, and the word playbackRate does not appear in this file. The
+        only oscillator anywhere is one fixed 92 Hz half cycle inside "thock",
+        which is over before a second cycle can start, so it is a mass and not
+        a tone.
+
+     2. NOTHING MAY HAVE A RESONANCE SHARP ENOUGH TO BE HEARD AS A PITCH. This
+        is the part the previous version got wrong, and it is worth being blunt
+        about because it is the reason tiles sounded like piano keys. That
+        version had no notes in it either: noise, fixed frequencies, no rate
+        changes. But it excited five bandpass filters at Q 5 to 17, and a high Q
+        bandpass fed with noise IS an oscillator, near enough, because it rings
+        for Q/(pi*f) seconds. Q 9 at 284 Hz rings long enough to be heard as a
+        D, and 463 and 703 sat on top of it, so each tile played a chord. Worse,
+        the per hit jitter was applied to Q and to decay, which changed WHICH
+        band dominated, so the perceived note moved from tile to tile. That is a
+        melody, arrived at without ever writing one down.
+
+        So every Q here is at or under 2.6. At Q 2.2 and 150 Hz the ring lasts
+        about five milliseconds, a fifth of one cycle. It is a knock. And the
+        band gains are FIXED, never jittered, so the centre of the spectrum
+        cannot wander between hits.
+
+     WHERE THE VARIATION COMES FROM INSTEAD: stereo position, level, tail
+     length, top end brightness, the crowd thinning below, and the shared tail
+     in build(). Six axes of difference, none of them pitch. */
+
+  /* Overlapping hits are wanted, so there is no cooldown. What there is instead
+     is a decaying count of how much has just been triggered, used to pull each
+     new hit down: sweep the list fast and they melt into one resonance rather
+     than stacking into a wall.
+
+     THE FLOOR MATTERS AS MUCH AS THE SLOPE. An unbounded 1/(1+d) curve does not
+     thin a fast sweep, it mutes it: past about twenty hits in a second the next
+     one rounds to nothing and the page goes silent exactly when the hand is most
+     active, which reads as broken rather than as calm. So the curve bottoms out
+     at 0.12 and stays there. A fast sweep sits about 10dB down and keeps going,
+     which with the shared tail underneath is the wash rather than the wall. */
+  const CROWD_FLOOR = 0.12;
+  function crowd(now){
+    density *= Math.pow(0.5, (now - densityAt) / 260);   /* halves every 260ms */
+    densityAt = now;
+    return CROWD_FLOOR + (1 - CROWD_FLOOR) / (1 + density*0.5);
+  }
+
+  const jit = () => 0.85 + Math.random()*0.3;
+
+  /* Per hit destination: a panner into the dry shelf, plus a tap off the same
+     point into the shared tail. x is -1..1 across the viewport, so the sound
+     arrives from where the pointer is. */
+  function outFor(c, x, send){
+    let node;
+    if (c.createStereoPanner){
+      node = c.createStereoPanner();
+      node.pan.value = Math.max(-0.85, Math.min(0.85, (x === undefined ? 0 : x) * 0.7));
+    } else {
+      node = c.createGain();
+    }
+    node.connect(warm);
+    if (send > 0 && verb){
+      const s2 = c.createGain(); s2.gain.value = send;
+      node.connect(s2); s2.connect(verb);
+    }
+    return node;
+  }
+
+  /* ONE BAND OF NOISE WITH AN ENVELOPE, the only sound making primitive in here.
+     spec is a chain of filters described as {t,f,q}. off is where in the noise
+     buffer to read: pass the same off to several bands of one hit and they are
+     excited by the same slice of noise, which is what makes them read as one
+     object being struck rather than as several things agreeing to start. */
+  function band(c, out, spec, t, peak, atk, dur, off){
+    if (peak < 0.0008) return;      /* below this it is only CPU */
+    const src = c.createBufferSource();
+    src.buffer = noiseBuf; src.loop = true;
+    let node = src;
+    for (const f of spec){
+      const bq = c.createBiquadFilter();
+      bq.type = f.t; bq.frequency.value = f.f; bq.Q.value = f.q;
+      node = node.connect(bq);
+    }
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + atk + dur);
+    node.connect(g).connect(out);
+    src.start(t, off === undefined ? Math.random()*0.9 : off);
+    src.stop(t + atk + dur + 0.04);
+  }
+
+  /* ---- GLASS 1. "veil" : breath over a cold pane -------------------------
+     No strike at all. A slow swell of broad noise around 1 kHz with a low body
+     under it, and the top end cut at a different height every time, which is
+     the only thing that changes. The calmest of the four. */
+  function vVeil(c, x, soft, room){
+    const t = c.currentTime, out = outFor(c, x, 0.50), off = Math.random()*0.9;
+    const peak = (soft ? 0.048 : 0.125) * room;
+    band(c, out, [{t:"bandpass",f:1050,q:0.8},
+                  {t:"lowpass", f:2600 + Math.random()*1700, q:0.4}],
+         t, peak, soft ? 0.075 : 0.045, (soft ? 0.34 : 0.52) * jit(), off);
+    band(c, out, [{t:"bandpass",f:128,q:1.6}],
+         t, peak*0.85, 0.030, 0.38 * jit(), off);
+  }
+
+  /* ---- GLASS 2. "zung" : the body excited -------------------------------
+     Three fixed low Q bands and a dulled edge on the arriving half. This is the
+     zung: material, weight, a tail, and no note anywhere in it. */
+  const BODY = [
+    { f: 150, q: 2.2, g: 0.95, d: 0.30 },
+    { f: 320, q: 2.6, g: 0.70, d: 0.24 },
+    { f: 620, q: 2.0, g: 0.34, d: 0.16 }
+  ];
+  function vZung(c, x, soft, room){
+    const t = c.currentTime, out = outFor(c, x, 0.40), off = Math.random()*0.9;
+    const peak = (soft ? 0.062 : 0.165) * room;
+    if (!soft)
+      band(c, out, [{t:"bandpass",f:1500,q:0.7},{t:"lowpass",f:3400,q:0.4}],
+           t, peak*0.34, 0.004, 0.042, off);
+    const life = soft ? 0.6 : 1;
+    for (const b of BODY)                     /* b.g is fixed: never jittered */
+      band(c, out, [{t:"bandpass",f:b.f,q:b.q}],
+           t, peak*b.g, soft ? 0.028 : 0.007, b.d*life*jit(), off);
+  }
+
+  /* ---- GLASS 3. "sheen" : light grazing an edge -------------------------
+     High, airy, and the quietest by a distance, with the largest share going to
+     the shared tail. A low ghost keeps it from sounding like tape hiss. */
+  function vSheen(c, x, soft, room){
+    const t = c.currentTime, out = outFor(c, x, 0.62), off = Math.random()*0.9;
+    const peak = (soft ? 0.030 : 0.075) * room;
+    band(c, out, [{t:"highpass",f:2200,q:0.5},
+                  {t:"lowpass", f:6200 + Math.random()*2600, q:0.4}],
+         t, peak, soft ? 0.055 : 0.022, (soft ? 0.26 : 0.36) * jit(), off);
+    band(c, out, [{t:"lowpass",f:230,q:0.5}],
+         t, peak*2.0, 0.030, 0.28 * jit(), off);
+  }
+
+  /* ---- GLASS 4. "field" : no discrete hits at all -----------------------
+     The strongest possible answer to "moving quickly should not sound like keys
+     being pressed": there is nothing to press. One noise voice runs from the
+     first gesture to the last, silent at rest. A tile does not trigger a sound,
+     it adds energy to a running total, and that total drives level and cutoff.
+     Work the list and the pad opens and brightens; stop and it settles. There
+     is no event to count, so there is nothing to hear as rhythm or melody. */
+  let fld = null;
+  function vField(x, soft){
+    withCtx(c => {
+      if (!fld){
+        const src = c.createBufferSource();
+        src.buffer = noiseBuf; src.loop = true;
+        const hp = c.createBiquadFilter();
+        hp.type = "highpass"; hp.frequency.value = 90;  hp.Q.value = 0.3;
+        const lp = c.createBiquadFilter();
+        lp.type = "lowpass";  lp.frequency.value = 700; lp.Q.value = 0.4;
+        const g = c.createGain(); g.gain.value = 0;
+        const p = c.createStereoPanner ? c.createStereoPanner() : c.createGain();
+        src.connect(hp).connect(lp).connect(g).connect(p);
+        p.connect(warm);
+        if (verb){ const s2 = c.createGain(); s2.gain.value = 0.55; p.connect(s2); s2.connect(verb); }
+        src.start(0);
+        fld = { g, lp, p, e: 0, at: performance.now() };
+      }
+      const f = fld, t = c.currentTime, now = performance.now();
+      f.e *= Math.pow(0.5, (now - f.at) / 520);        /* halves every 520ms */
+      f.at = now;
+      f.e = Math.min(6, f.e + (soft ? 0.35 : 1));
+      const lvl = 0.045 + 0.075 * (1 - Math.pow(0.62, f.e));
+      f.g.gain.cancelScheduledValues(t);
+      f.g.gain.setValueAtTime(f.g.gain.value, t);
+      f.g.gain.setTargetAtTime(lvl, t, 0.07);         /* open */
+      f.g.gain.setTargetAtTime(0,   t + 0.12, 0.62);  /* and always closing */
+      f.lp.frequency.setTargetAtTime(680 + 1000*(1 - Math.pow(0.70, f.e)), t, 0.10);
+      if (f.p.pan)
+        f.p.pan.setTargetAtTime(Math.max(-0.8, Math.min(0.8, (x || 0) * 0.65)), t, 0.12);
+    });
+  }
+
+  /* THE PUBLIC TILE CALL. soft is the leaving half: no edge, less level, shorter
+     tail, so it reads as the resonance letting go and not as a second strike. */
+  function zung(x, soft){
+    if (GLASS === "field"){ vField(x, soft); return; }
+    withCtx(c => {
+      const now = performance.now();
+      const room = crowd(now);             /* 1 when idle, 0.12 under a sweep */
+      density += 1;
+      (GLASS === "zung"  ? vZung :
+       GLASS === "sheen" ? vSheen : vVeil)(c, x, soft, room);
+    });
+  }
+
+  /* ======================= THE HAPTIC, SCROLL DRIVEN =======================
+
+     WHAT WAS WRONG BEFORE. The old pulse swept a sine from 188 Hz down to
+     152 Hz over 24 ms and let it decay for 26 ms. A falling low sine with a
+     soft tail is, acoustically, exactly a raspberry, which is why it read as
+     one. Three changes fix it and they are all subtractive:
+
+       no glide      pitch movement in the low mids is the entire effect. The
+                     one voice with any low content holds 92 Hz dead still and
+                     is gone in 11 ms, roughly a single cycle.
+       shorter       nothing here exceeds 12 ms. A real linear resonant actuator
+                     is a mass on a spring that is already stopped; anything you
+                     can hear ringing is a speaker, not a motor.
+       drier         no send to the shared tail from any of these, ever. The
+                     tail is what glass gets; a haptic with reverb on it stops
+                     being felt and starts being heard.                        */
+
+  function tTick(c, amt){          /* dry, precise, no low end */
+    band(c, warm, [{t:"bandpass",f:1900,q:1.2},{t:"lowpass",f:5200,q:0.4}],
+         c.currentTime, 0.030 + 0.030*amt, 0.0012, 0.007);
+  }
+  function tThock(c, amt){         /* transient plus one cycle of mass */
+    const t = c.currentTime, off = Math.random()*0.9;
+    band(c, warm, [{t:"bandpass",f:2400,q:1.0}],
+         t, 0.024 + 0.020*amt, 0.0010, 0.005, off);
+    const o = c.createOscillator();
+    o.type = "sine";
+    o.frequency.value = 92;        /* FIXED. the glide was the fart. */
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.030 + 0.030*amt, t + 0.0015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.011);
+    o.connect(g).connect(warm);
+    o.start(t); o.stop(t + 0.02);
+  }
+  function tGrain(c, amt){         /* all noise, a ratchet tooth */
+    band(c, warm, [{t:"highpass",f:380,q:0.5},{t:"lowpass",f:4600,q:0.4}],
+         c.currentTime, 0.026 + 0.032*amt, 0.0008, 0.009);
+  }
+  function tHush(c, amt){          /* almost subliminal */
+    band(c, warm, [{t:"bandpass",f:2800,q:0.9}],
+         c.currentTime, 0.012 + 0.014*amt, 0.0010, 0.005);
+  }
+
+  function tap(v){
+    const now = performance.now();
+    /* A BACKSTOP, NOT A RATE POLICY. The scroll stride keeps normal use at 45ms
+       or wider on its own; this only catches something pathological, such as a
+       programmatic scroll storm.
+
+       30 and not 34, because scroll events land on frames. A 45ms target cannot
+       be honoured exactly at 60Hz, so the pulses alternate 33ms and 50ms around
+       it, and a 34ms backstop would have clipped one of every two. 30 sits under
+       the true quantisation floor of 33, so it never fires in ordinary use and
+       cannot scramble the phase. */
+    if (now - lastDetent < 30) return;
+    lastDetent = now;
+    const amt = Math.max(0, Math.min(1, v === undefined ? 0.5 : v));
+    withCtx(c => (TAP === "tick"  ? tTick  :
+                  TAP === "grain" ? tGrain :
+                  TAP === "hush"  ? tHush  : tThock)(c, amt));
+  }
+
+  /* ======================== THE LOOP, AND THE HOLE =======================
+
+     WHAT WAS ACTUALLY WRONG. The old scheme scheduled a fresh copy 2.2s before
+     the last one ended and equal power crossfaded the overlap, which is textbook
+     and which cannot work on this particular file. Measured off ambient.mp3:
+
+       decoded length          150.01s
+       leading silence         298ms of it, encoder padding
+       first 2.2s              25.6dB below the track's median level
+       last 2.2s               also far below it
+
+     The track fades in over about forty seconds and fades out over fourteen. So
+     the crossfade was blending near silence with near silence: not a seam, a
+     2.2 second HOLE at -25.6dB, once every two and a half minutes, with 298ms of
+     dead air parked at the head of every lap. Constant power arithmetic is no
+     help when both inputs are already at nothing.
+
+     WHAT REPLACES IT. Trim to the part of the track that is actually at level,
+     then bake the crossfade into the buffer once, so playback is a single looping
+     source and there is nothing left to schedule.
+
+       1. an envelope in 250ms windows, and its median
+       2. keep only the run of windows within about 2dB of that median, which
+          discards the fade in, the fade out and the padding in one step
+       3. of that run, length N, take a crossfade X of 4s and a loop L = N - X
+       4. rewrite the first X samples in place as
+                out[i] = S[i]*sin(u) + S[L+i]*cos(u),  u = (i/X)*pi/2
+          so the sample after the loop's last is the one that followed it in the
+          original recording. The join is continuous by construction.
+       5. loopStart and loopEnd, loop = true, start once
+
+     In place is safe and saves a second 90MB buffer: the only samples read are
+     [L, L+X), the far tail, and the only samples written are [0, X).
+
+     Measured on the result: the seam sits 2.4dB under the median, the quietest
+     natural moment in the loop sits 3.1dB under it, so the join is no longer the
+     quietest point and there is nothing to listen for. The step across the join
+     is 0.0015, against 0.0086 for an ordinary 99.9th percentile sample step
+     inside the material, so it cannot click either.
+
+     And because it is one source with loop = true, a backgrounded tab cannot
+     miss a handover. The old version needed two seconds of setTimeout lookahead
+     for exactly that reason; that whole mechanism is gone. */
+
+  const LOOP_GATE = 0.80;   /* keep windows above this fraction of the median */
+  const LOOP_XF   = 4.0;    /* seconds baked into the join */
+
+  function seamless(buf){
+    const sr = buf.sampleRate, nch = buf.numberOfChannels;
+    const ch = [];
+    for (let c = 0; c < nch; c++) ch.push(buf.getChannelData(c));
+
+    const W = Math.floor(sr / 4);                 /* 250ms windows */
+    const nw = Math.floor(buf.length / W);
+    if (nw < 24) return null;                     /* too short to be worth it */
+
+    const env = new Float64Array(nw);
+    for (let w = 0; w < nw; w++){
+      const a0 = w*W, a1 = a0 + W;
+      let sum = 0, k = 0;
+      /* every fourth sample: the answer to three decimal places is the same and
+         it is four times less work on the main thread at load */
+      for (let i = a0; i < a1; i += 4){
+        let v = 0;
+        for (let c = 0; c < nch; c++) v += ch[c][i];
+        sum += v*v; k++;
+      }
+      env[w] = Math.sqrt(sum / k);
+    }
+
+    const med = Float64Array.from(env).sort()[nw >> 1];
+    if (!(med > 0)) return null;
+    const gate = med * LOOP_GATE;
+
+    let w0 = 0;      while (w0 < nw && env[w0] <= gate) w0++;
+    let w1 = nw - 1; while (w1 > w0 && env[w1] <= gate) w1--;
+    const s0 = w0*W, N = (w1 + 1)*W - s0;
+    if (N < sr*8) return null;                    /* nothing usable survived */
+
+    const X = Math.min(Math.floor(LOOP_XF*sr), Math.floor(N/4));
+    const L = N - X;
+    for (let c = 0; c < nch; c++){
+      const d = ch[c];
+      for (let i = 0; i < X; i++){
+        const u = (i/X) * (Math.PI/2);
+        d[s0 + i] = d[s0 + i]*Math.sin(u) + d[s0 + L + i]*Math.cos(u);
+      }
+    }
+    return { start: s0/sr, end: (s0 + L)/sr };
+  }
+
+  /* fetch first, then XMLHttpRequest, which unlike fetch will still read a
+     sibling file from a file:// page in some browsers. Only if both fail does
+     the seamed <audio> element fallback come out. */
+  function grab(){
+    return fetch(MUSIC_URL)
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .catch(() => new Promise((res, rej) => {
+        try {
+          const x = new XMLHttpRequest();
+          x.open("GET", MUSIC_URL);
+          x.responseType = "arraybuffer";
+          x.onload  = () => x.response ? res(x.response) : rej(new Error("empty"));
+          x.onerror = () => rej(new Error("xhr"));
+          x.send();
+        } catch (e) { rej(e); }
+      }));
+  }
+
+  /* Started once and never again. Nothing in the page's visual state touches it:
+     the intro landing, parking, unparking and every field change leave it alone,
+     so the bed runs unbroken from the first gesture to the last. */
+  function music(){
+    if (musicOn || muted || !build()) return;
+    musicOn = true;
+    grab()
+      .then(b => ctx.decodeAudioData(b))
+      .then(buf => {
+        const lp = seamless(buf);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.loop = true;
+        if (lp){ src.loopStart = lp.start; src.loopEnd = lp.end; }
+        src.connect(musicBus);
+        const t = ctx.currentTime;
+        src.start(t + 0.05, lp ? lp.start : 0);
+        musicSrc = src;
+        /* six seconds, not four: the bed should arrive without an entrance */
+        musicBus.gain.setValueAtTime(0.0001, t);
+        musicBus.gain.linearRampToValueAtTime(MUSIC_GAIN, t + 6);
+      })
+      .catch(() => {
+        /* last resort. A plain element loops with the encoder padding intact, so
+           this one does have a small seam. It is the cost of opening the page
+           with no server at all. */
+        musicEl = new Audio(MUSIC_URL);
+        musicEl.loop = true;
+        musicEl.volume = MUSIC_GAIN;
+        musicEl.play().catch(() => { musicOn = false; });
+      });
+  }
+
+  /* ONE SWITCH FOR EVERY OUTPUT, INCLUDING THE ONES THAT ARE NOT SOUND.
+     The button says "mute" but what a visitor means by it is "stop", so the
+     device motor has to answer to it too. Sfx cannot name Haptics directly:
+     Haptics is declared later in the file and referencing a const before its
+     initialiser is a ReferenceError, not undefined, so even typeof would throw.
+     A list of callbacks avoids the ordering problem entirely. */
+  const muteHooks = [];
+  function onMute(fn){ muteHooks.push(fn); }
+
+  function setMuted(v){
+    muted = !!v;
+    try { localStorage.setItem(KEY, muted ? "off" : "on"); } catch (e) {}
+    if (musicEl) musicEl.muted = muted;
+    for (const fn of muteHooks) { try { fn(muted); } catch (e) {} }
+    if (master && ctx){
+      const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(master.gain.value, t);
+      master.gain.linearRampToValueAtTime(muted ? 0 : 1, t + 0.06);
+    }
+    if (!muted) music();
+    return muted;
+  }
+
+  /* Setters for the shift+S panel. Nothing else in the page calls these. */
+  function setGlass(v){
+    GLASS = v;
+    try { localStorage.setItem("mx30-glass", v); } catch (e) {}
+  }
+  function setTap(v){
+    TAP = v;
+    try { localStorage.setItem("mx30-tap", v); } catch (e) {}
+  }
+  function setMusic(v){
+    const g = Math.max(0, Math.min(1, v));
+    if (musicEl) musicEl.volume = g;
+    if (musicBus && ctx){
+      const t = ctx.currentTime;
+      musicBus.gain.cancelScheduledValues(t);
+      musicBus.gain.setValueAtTime(musicBus.gain.value, t);
+      musicBus.gain.linearRampToValueAtTime(g, t + 0.25);
+    }
+  }
+
+  return { zung, tap, detent: tap, setMuted, isMuted: () => muted, arm, onMute,
+           setGlass, setTap, setMusic,
+           glass: () => GLASS, tap_: () => TAP, musicGain: () => MUSIC_GAIN };
+})();
+
+/* Delegated, because the rows do not exist yet when this runs. closest() folds a
+   hover on any child, including .cta, back to the surface itself, so crossing a
+   card is one event and not one per element entered.
+
+   Entering plays the tile. Leaving plays the same material with the attack taken
+   off, so it reads as the resonance letting go rather than as a second hit. No
+   cooldown either way: overlap is wanted, and zung() thins itself when hits
+   crowd rather than refusing them. */
+(function wireCues(){
+  let last = null;
+  const xOf = e => (e.clientX / innerWidth) * 2 - 1;   /* -1..1, becomes stereo */
+  addEventListener("pointerover", e => {
+    const t = e.target instanceof Element ? e.target.closest(".row, .gpill") : null;
+    if (t === last) return;
+    if (last) Sfx.zung(xOf(e), true);                  /* leaving the previous one */
+    last = t;
+    if (t) Sfx.zung(xOf(e), false);
+  }, { passive:true });
+
+  /* pointerover cannot see the cursor leave the last surface for open page, so
+     the departure is caught here too */
+  addEventListener("pointerout", e => {
+    if (!last) return;
+    const to = e.relatedTarget instanceof Element
+      ? e.relatedTarget.closest(".row, .gpill") : null;
+    if (to) return;
+    last = null;
+    Sfx.zung(xOf(e), true);
+  }, { passive:true });
+})();
+
+
+/* aria-pressed true means muted, matching the label. Painted from the stored
+   state on load, so a muted visitor is not told the sound is on. */
+(function wireMute(){
+  const b = document.getElementById("mute");
+  if (!b) return;
+  const paint = () => {
+    const m = Sfx.isMuted();
+    b.setAttribute("aria-pressed", m ? "true" : "false");
+    b.setAttribute("aria-label", m ? "Unmute sound" : "Mute sound");
+    b.title = m ? "Unmute sound" : "Mute sound";
+  };
+  paint();
+  b.addEventListener("click", () => {
+    const nowMuted = Sfx.setMuted(!Sfx.isMuted());
+    paint();
+    /* unmuting is itself a gesture, so the context can start here, and a tick
+       confirms the change audibly */
+    if (!nowMuted){ Sfx.arm(); setTimeout(() => Sfx.zung(0, false), 40); }
+  });
+})();
+
+
+/* THE DEVICE'S OWN MOTOR, if it has one the web can reach.
+   Same principle as the audible tap and a separate accumulator, because the two
+   want very different distances: a motor pulse is coarse and costs battery, so
+   it wants to be rarer than the sound by a factor of about five.
+
+   TWO BACKENDS, ONE OF WHICH IS A TRICK.
+     Android    navigator.vibrate(ms). Real, documented, and blunt: the whole
+                phone buzzes rather than ticking, and durations under about 10ms
+                are quietly rounded up or dropped by the platform, so there is no
+                point asking for less.
+     iOS        navigator.vibrate does not exist. What does work is clicking a
+                hidden <input type="checkbox" switch>, which fires the system
+                switch haptic through the Taptic Engine: crisp, properly short,
+                and much better than Android's. It is also undocumented and
+                iOS 18 or later, so it is wrapped and allowed to fail silently.
+     Desktop    nothing. There is no web API for the Force Touch actuator in a
+                MacBook trackpad, private AppKit only, so a laptop gets sound and
+                nothing else. This is not a permission we are missing.
+
+   THE COAST RULE. While a finger is down, the pulses track it closely, which is
+   what makes the page feel like it has teeth. Once the finger lifts, momentum is
+   the phone's doing and not the hand's, so the stride widens by 2.2x and then
+   stops entirely after 1.5s. That is most of the battery saving and it is also
+   the more honest behaviour: you feel the ratchet while you are turning it. */
+const Haptics = (function(){
+  const KEY = "mx30-haptics";
+  const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const canVibrate = typeof navigator.vibrate === "function";
+  const kind = iOS ? "ios" : canVibrate ? "android" : null;
+
+  /* Distance thresholds, in px of accumulated scroll. iOS gets the shorter one
+     because a Taptic tick is cheap and precise; Android's is nearly double
+     because a whole device buzz at that rate is both ugly and expensive. */
+  const STRIDE = iOS ? 140 : 240;
+  const GAP    = iOS ? 60  : 100;      /* ms floor between pulses */
+  const COAST  = 2.2;                  /* stride multiplier once the finger is up */
+  const LETGO  = 1500;                 /* ms of momentum still worth marking */
+
+  let on = kind !== null;
+  try { if (localStorage.getItem(KEY) === "off") on = false; } catch (e) {}
+
+  let armed = false, sw = null, last = -1e9, travel = 0;
+  let down = false, upAt = -1e9, gagged = false;
+
+  /* The mute button stops the motor as well as the speakers, and vibrate(0)
+     cancels anything already running rather than waiting for it to finish. */
+  Sfx.onMute(m => {
+    gagged = m;
+    if (m){
+      travel = 0;
+      if (canVibrate) try { navigator.vibrate(0); } catch (e) {}
+    }
+  });
+  if (Sfx.isMuted()) gagged = true;
+
+  addEventListener("touchstart", () => { down = true; armed = true; }, { passive:true });
+  addEventListener("touchend",   () => { down = false; upAt = performance.now(); }, { passive:true });
+  addEventListener("touchcancel",() => { down = false; upAt = performance.now(); }, { passive:true });
+
+  /* Rendered, not display:none, or Safari has nothing to fire the haptic on.
+     Zero opacity, one pixel, no pointer events, out of the tab order. */
+  function switchEl(){
+    if (sw) return sw;
+    try {
+      sw = document.createElement("input");
+      sw.type = "checkbox";
+      sw.setAttribute("switch", "");
+      sw.tabIndex = -1;
+      sw.setAttribute("aria-hidden", "true");
+      sw.style.cssText = "position:fixed;left:0;bottom:0;width:1px;height:1px;" +
+                         "opacity:0;pointer-events:none;margin:0;border:0;padding:0";
+      document.body.appendChild(sw);
+    } catch (e) { sw = null; }
+    return sw;
+  }
+
+  function fire(amt){
+    if (iOS){
+      const el = switchEl();
+      if (el) try { el.click(); } catch (e) {}
+    } else {
+      try { navigator.vibrate(Math.round(8 + 6*amt)); } catch (e) {}
+    }
+  }
+
+  /* dy is one scroll event's absolute delta, amt is 0..1 speed. */
+  function step(dy, amt){
+    if (!on || !kind || !armed || gagged) return;
+    const now = performance.now();
+    const coasting = !down;
+    if (coasting && now - upAt > LETGO){ travel = 0; return; }
+    const stride = STRIDE * (coasting ? COAST : 1);
+    travel += dy;
+    if (travel < stride) return;
+    travel %= stride;
+    if (now - last < GAP) return;
+    last = now;
+    fire(amt);
+  }
+
+  function set(v){
+    on = !!v && kind !== null;
+    try { localStorage.setItem(KEY, on ? "on" : "off"); } catch (e) {}
+    if (!on){
+      travel = 0;
+      if (canVibrate) try { navigator.vibrate(0); } catch (e) {}
+    } else if (!gagged) fire(0.6);
+    return on;
+  }
+  /* Called when the page leaves the prologue, so nothing banked outside the
+     story can fire on the way back in. */
+  function reset(){ travel = 0; }
+
+  return { step, set, reset, isOn: () => on, kind: () => kind,
+           stride: () => STRIDE };
+})();
+
+
+/* THE AUDIBLE TAP, DRIVEN BY THE SAME ACCUMULATED DISTANCE.
+   One pulse per stride of scrolled pixels, not per interval of time, so the rate
+   follows the wheel rather than the clock.
+
+   THE STRIDE IS NOT CONSTANT, AND THIS IS THE WHOLE POINT. With a fixed 46px a
+   crawl at 0.3px/ms puts pulses 150ms apart, which is right, but a throw at
+   3.4px/ms puts them 13ms apart. That is not a ratchet, it is a buzz, and worse,
+   the 28ms ceiling inside tap() was then eating two pulses out of every three
+   and scrambling the phase of whatever survived, which is most of why fast
+   scrolling felt broken rather than fast.
+
+   Two clicks closer together than about forty milliseconds stop being two
+   clicks. That is auditory fusion and no amount of tuning gets around it, so it
+   is written into the stride as an inequality rather than discovered later:
+
+       stride = max(BASE, TIGHT * velocity)
+
+   The second term is the whole idea. TIGHT is in milliseconds, velocity is in
+   px per ms, so their product is the distance the page must travel for TIGHT ms
+   to have passed. Ask for a pulse every that-many pixels and the pulses land
+   TIGHT apart no matter how fast the wheel is going. BASE takes over at low
+   speed, where distance rather than time should set the rate.
+
+       crawl   0.25px/ms   42px   tk.....tk.....tk.....tk     168ms, even
+       slow    0.6         42px   tk..tk..tk..tk               70ms
+       brisk   1.5         67px   tk.tk.tk.tk.tk               45ms
+       throw   5.0        225px   tktktktktktk                 45ms, holds
+
+   So density climbs from six a second to twenty two and then stops climbing,
+   because past that there is nothing left to hear. Nothing is ever dropped, the
+   phase stays even at every speed, and tap()'s ceiling never engages: it is now
+   only a backstop against a programmatic scroll storm.
+
+   THE ODYSSEY ONLY. Both the tap and the motor belong to the ascii story and
+   stop at the door. Scrolling through the prologue is a mechanism you are
+   operating, and a detent per notch tells you the thing is moving under your
+   hand; scrolling the index is reading, and a tick under every paragraph is a
+   page that will not sit still. So html.intro is the gate, the same class the
+   prologue already sets. Landing clears it, parking clears it, skipping clears
+   it, and scrolling back up into the story sets it again.
+
+   The accumulator is reset on the way out rather than merely paused, so the
+   distance banked in the index cannot fire a pulse on re-entry. prev and at are
+   still updated on every event, in or out, because if they were not, the first
+   scroll after coming back would see the entire index as one delta.
+
+   Two more guards. A delta over 900px is a jump and not a scroll, which is how
+   the page's own scrollTo calls at load and at landing stay silent. A velocity
+   floor keeps a one pixel trackpad tremor from counting. */
+(function wireScroll(){
+  const root = document.documentElement;
+  const BASE  = 42;                /* px per pulse at a crawl */
+  const TIGHT = 45;                /* ms: the closest two pulses may ever fall */
+  const FLOOR = 0.05;              /* px per ms below which nothing fires */
+  const FAST  = 3.4;               /* px per ms that counts as full strength */
+  let prev = scrollY, travel = 0, at = performance.now(), vel = 0;
+
+  addEventListener("scroll", () => {
+    const y = scrollY, now = performance.now();
+    const dy = Math.abs(y - prev), dt = Math.max(1, now - at);
+    prev = y; at = now;                                   /* always, gate or no gate */
+    if (!root.classList.contains("intro")){
+      travel = 0; vel = 0;
+      Haptics.reset();
+      return;
+    }
+    if (dy > 900){ travel = 0; vel = 0; return; }        /* a jump, not a scroll */
+    vel = vel*0.7 + (dy/dt)*0.3;                          /* smoothed, so one
+                                                             stuttering frame does
+                                                             not swing the level */
+    const amt = Math.min(1, vel / FAST);
+    Haptics.step(dy, amt);                                /* its own accumulator */
+
+    travel += dy;
+    const stride = Math.max(BASE, TIGHT*vel);
+    if (travel < stride) return;
+    travel %= stride;              /* keep the remainder: the phase stays honest
+                                      over a long scroll instead of resetting */
+    if (vel < FLOOR) return;
+    Sfx.tap(amt);
+  }, { passive:true });
+})();
+
+
+/* THE AUDITION PANEL, shift+S. Not shipped UI: a way to sit in the page and
+   switch voices without a rebuild. The choice persists, the panel does not. */
+(function wireAudition(){
+  const G = [["veil","breath over cold glass"],
+             ["zung","the body excited"],
+             ["sheen","light grazing an edge"],
+             ["field","one continuous pad, no hits"]];
+  const T = [["tick","dry and precise"],
+             ["thock","transient plus mass"],
+             ["grain","a ratchet tooth"],
+             ["hush","barely there"]];
+  let box = null;
+
+  function build(){
+    box = document.createElement("div");
+    box.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:99999;" +
+      "font:11px/1.5 ui-monospace,Menlo,monospace;background:rgba(12,12,14,.92);" +
+      "color:#e8e8ea;padding:12px 14px;border-radius:10px;width:236px;" +
+      "backdrop-filter:blur(8px);box-shadow:0 8px 30px rgba(0,0,0,.45)";
+    const h = (t) => "<div style='opacity:.5;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px'>" + t + "</div>";
+    const rows = (list, kind, cur) => list.map(([k, d]) =>
+      "<button data-k='" + kind + "' data-v='" + k + "' style=\"display:block;width:100%;text-align:left;" +
+      "margin:0 0 4px;padding:5px 7px;border-radius:6px;border:0;cursor:pointer;font:inherit;" +
+      "background:" + (k === cur ? "#3b4cff" : "rgba(255,255,255,.07)") + ";color:inherit\">" +
+      k + "<span style='opacity:.5'>  " + d + "</span></button>").join("");
+    const paint = () => {
+      box.innerHTML =
+        h("glass") + rows(G, "g", Sfx.glass()) +
+        "<div style='height:8px'></div>" +
+        h("scroll tap") + rows(T, "t", Sfx.tap_()) +
+        "<div style='height:8px'></div>" +
+        h("device motor") +
+        (Haptics.kind()
+          ? "<button data-k='h' data-v='x' style=\"display:block;width:100%;text-align:left;" +
+            "margin:0 0 4px;padding:5px 7px;border-radius:6px;border:0;cursor:pointer;font:inherit;" +
+            "background:" + (Haptics.isOn() ? "#3b4cff" : "rgba(255,255,255,.07)") +
+            ";color:inherit\">" + (Haptics.isOn() ? "on" : "off") +
+            "<span style='opacity:.5'>  " + Haptics.kind() + ", every " +
+            Haptics.stride() + "px</span></button>"
+          : "<div style='opacity:.35;padding:2px 0 4px'>none on this device</div>") +
+        "<div style='height:8px'></div>" +
+        h("music") +
+        "<input id='mv' type='range' min='0' max='0.9' step='0.025' value='" +
+        Sfx.musicGain() + "' style='width:100%'>" +
+        "<div style='opacity:.4;margin-top:8px'>shift+S to close</div>";
+      box.querySelectorAll("button").forEach(b => {
+        b.onclick = () => {
+          const v = b.dataset.v;
+          if (b.dataset.k === "g"){ Sfx.setGlass(v); paint(); Sfx.zung(0, false); }
+          else if (b.dataset.k === "h"){ Haptics.set(!Haptics.isOn()); paint(); }
+          else { Sfx.setTap(v); paint(); Sfx.tap(0.8); }
+        };
+      });
+      box.querySelector("#mv").oninput = e => Sfx.setMusic(+e.target.value);
+    };
+    paint();
+    document.body.appendChild(box);
+  }
+
+  addEventListener("keydown", e => {
+    if (!e.shiftKey || (e.key !== "S" && e.key !== "s")) return;
+    if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    e.preventDefault();
+    Sfx.arm();
+    if (box){ box.remove(); box = null; } else build();
+  });
+})();
+
+
+/* 3. PREVIEWS */
 const PREVIEW = "live";
 const LINGER  = 900;          /* ms of steady hover before the real thing loads */
 
@@ -2503,9 +2915,30 @@ const FIELD_NAME = ["contour field","metaballs","line grid","pinscreen",
                     "gravity wells","flow dashes","fluid","registration marks",
                     "agent graph"];
 const fieldTag = document.getElementById("fieldTag");
-function useField(n){
-  Ground.to(n);
+
+/* THE GAP BETWEEN TWO ROWS IS NOT AN INSTRUCTION TO GO IDLE. */
+const IDLE_GAP = 90;
+let idleTimer = 0;
+
+/* ox, oy in field coordinates, optional, forwarded to the wipe as its origin.
+   The pointer's live position is what hover passes, so the change starts under
+   the cursor. Keyboard focus has no pointer and passes the row's centre. */
+function useField(n, ox, oy){
+  if (idleTimer){ clearTimeout(idleTimer); idleTimer = 0; }
+  Ground.to(n, ox, oy);
   if (fieldTag) fieldTag.textContent = FIELD_NAME[n];
+}
+function dropField(ox, oy){
+  if (idleTimer) clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { idleTimer = 0; useField(0, ox, oy); }, IDLE_GAP);
+}
+/* The pointer is tracked in viewport pixels and the fields want the shader's own frame, x
+   in -ax/2..ax/2 and y in -0.5..0.5 with y up, both divided by viewport height so a square
+   is square. */
+function rowOrigin(el){
+  const r = el.getBoundingClientRect();
+  return [((r.left + r.right)*0.5 - innerWidth*0.5) / innerHeight,
+          -((r.top + r.bottom)*0.5 - innerHeight*0.5) / innerHeight];
 }
 
 const pretty = u => u.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
@@ -2513,39 +2946,10 @@ const index  = document.getElementById("index");
 const touch  = matchMedia("(hover: none)").matches;
 
 
-/* ============================================================
-   3b. THE SHOTS FOLDER
-   Every picture on this page is served from shots/, sitting next to
-   index.html, and the name is the project's own slug: PROJECTS carries
-   thumb:"shots/gravity-pong" and the widths it ships at.
-
-   The primary form is the responsive set, shots/<slug>-<width>.webp,
-   with a jpg twin at each width for anything that cannot decode webp.
-   That is what the srcset above asks for and what the browser should
-   find. If a deploy carries one flat file per project instead, which
-   is what an export from a screenshot tool gives you, this walks down
-   to it rather than leaving a black rectangle on the page:
-
-     shots/slug-2900.webp   <- srcset picks a width from here
-     shots/slug-2900.jpg    <- the jpg twin at the width it picked
-     shots/slug.webp        <- flat, no width suffix
-     shots/slug.jpg
-     shots/slug.png
-
-   Each step runs on the previous one's error, so nothing is fetched
-   speculatively: a correct deploy makes exactly one request per card
-   and never enters this function's body at all.
-
-   srcset and sizes are dropped at the first fallback. Without that the
-   browser keeps reselecting a candidate out of srcset, which is a webp,
-   and the jpg step can never take: that was the one real bug in the
-   single step version this replaces.
-
-   currentSrc, not the src attribute. The browser has already chosen a
-   width out of srcset by the time an error fires, and the attribute
-   still says the largest one, so asking the attribute for a jpg twin
-   requested a 2900px jpg to replace a 760px webp on a phone.
-   ============================================================ */
+/* THE SHOTS FOLDER. Pictures are shots/<slug>-<width>.webp with a jpg twin at each width.
+   On error it walks down: sized jpg, then flat webp, jpg, png. srcset and sizes are dropped
+   at the first fallback, or the browser keeps reselecting a webp and the jpg step never
+   takes. */
 function wireShot(im, p){
   if (!im) return;
   const flat = [p.thumb + ".webp", p.thumb + ".jpg", p.thumb + ".png"];
@@ -2576,9 +2980,7 @@ function wireShot(im, p){
   });
 }
 
-/* ============================================================
-   4. INDEX ROWS
-   ============================================================ */
+/* 4. INDEX ROWS */
 PROJECTS.forEach((p, i) => {
   const a = document.createElement("a");
   a.className = "row rise";
@@ -2600,13 +3002,7 @@ PROJECTS.forEach((p, i) => {
 
   a.innerHTML = `
     <span class="frame">
-      <!-- loading="lazy" is skipped on touch. The prologue removes a 1450vh
-           runway once it ends, changing the document's scroll height out from
-           under whatever viewport math the browser used to decide which
-           images were "close enough" to start loading, and mobile Safari in
-           particular has never handled that kind of post-paint reflow well
-           for native lazy images: they can simply never fire. Eight images,
-           eagerly, is a small enough cost to not be worth chasing that bug. -->
+      <!-- loading="lazy" is skipped on touch. -->
       <img class="shot" alt="" draggable="false"
            src="${p.thumb}-${p.w[p.w.length - 1]}.webp"
            srcset="${p.w.map(w => p.thumb + "-" + w + ".webp " + w + "w").join(", ")}"
@@ -2647,17 +3043,7 @@ PROJECTS.forEach((p, i) => {
    the CSS it drove; see the comment in ONE GLASS for why. */
 
 
-/* ============================================================
-   5. HOVER
-   The preview lives inside the row now. One image and one iframe are
-   reused for every row and repositioned by transform, so nothing is
-   reparented and the iframe never reloads on a hover change.
-   ============================================================ */
-  /* Four .fr-edge bars per picture were injected here, laid to the edges of
-     .frame so the artwork was their backdrop. Gone with the CSS that styled
-     them: nothing is placed over a picture any more, so there is no markup to
-     write and .frame stays a plain rounded box holding one <img>. See THE
-     FRAME'S INNER EDGE, DELETED in the stylesheet. */
+/* 5. HOVER */
 
 if (!touch && PREVIEW !== "off") {
   const art  = document.getElementById("art");
@@ -2670,11 +3056,6 @@ if (!touch && PREVIEW !== "off") {
      sideways shift left an empty strip, which is why some rows were blank on
      the left while image backed rows were not. */
 
-  /* An idle prefetch of all eight pictures lived here, to warm the shared
-     preview before the first hover. The cards carry their own <img> now, so the
-     browser handles it, and the first three are eager while the rest are lazy.
-     Keeping the prefetch would have defeated that and fetched all eight up
-     front. */
 
   shot.addEventListener("load", () => shot.classList.add("ready"));
   shot.addEventListener("error", () => {
@@ -2698,70 +3079,52 @@ if (!touch && PREVIEW !== "off") {
     if (s && s !== "about:blank") live.classList.add("ready");
   });
 
-  /* place(), measure()'s pane fields, and paint() lived here, positioning and
-     feeding an #art element that no card has needed since every card grew its
-     own <img>. #art still sits in the document at opacity:0, but nothing has
-     called art.classList.add("on") in a long time, so all of that was work
-     computed every scroll and resize frame for a box nobody was ever shown.
-
-     A hover-triggered, debounced .glassed class lived here too, giving each
-     card's ring a real backdrop-filter once a hover had settled. Removed along
-     with the CSS that drove it; see the comment in ONE GLASS for why. What is
-     left is the one thing still doing something real: which project's ASCII
-     field is on screen. */
   function enter(rw){
     over = rw;
     current = rw.dataset.url;
-    useField(parseInt(rw.dataset.field, 10));
+    const p = Ground.at();
+    useField(parseInt(rw.dataset.field, 10), p[0], p[1]);
   }
   function leave(rw){
     if (over !== rw) return;
     over = null;
-    useField(0);
+    const p = Ground.at();
+    dropField(p[0], p[1]);
   }
 
   document.querySelectorAll(".row").forEach(row => {
     row.addEventListener("pointerenter", () => enter(row), { passive:true });
     row.addEventListener("pointerleave", () => leave(row), { passive:true });
-    row.addEventListener("focus", () => enter(row));
-    row.addEventListener("blur",  () => leave(row));
-    /* There was a pointermove listener here that computed a normalised pointer
-       position and then discarded it: the parallax it fed was removed and the
-       arithmetic stayed. Eight listeners firing on every pointer event for a
-       value nothing read. */
+    /* focus has no pointer behind it, so the wipe starts from the row itself */
+    row.addEventListener("focus", () => {
+      over = row; current = row.dataset.url;
+      const o = rowOrigin(row);
+      useField(parseInt(row.dataset.field, 10), o[0], o[1]);
+    });
+    row.addEventListener("blur",  () => {
+      if (over !== row) return;
+      over = null;
+      const o = rowOrigin(row);
+      dropField(o[0], o[1]);
+    });
   });
 
 } else {
+  /* The reduced branch gets the same treatment: the idle flash and the gutter
+     flicker are not preview features, they are how the field behaves. */
   document.querySelectorAll(".row").forEach(row => {
-    row.addEventListener("pointerenter", () => useField(parseInt(row.dataset.field, 10)));
-    row.addEventListener("pointerleave", () => useField(0));
-    row.addEventListener("focus",        () => useField(parseInt(row.dataset.field, 10)));
-    row.addEventListener("blur",         () => useField(0));
+    const f = () => parseInt(row.dataset.field, 10);
+    row.addEventListener("pointerenter", () => { const p = Ground.at(); useField(f(), p[0], p[1]); });
+    row.addEventListener("pointerleave", () => { const p = Ground.at(); dropField(p[0], p[1]); });
+    row.addEventListener("focus",        () => { const o = rowOrigin(row); useField(f(), o[0], o[1]); });
+    row.addEventListener("blur",         () => { const o = rowOrigin(row); dropField(o[0], o[1]); });
   });
 }
 
-/* ============================================================
-   6. PROLOGUE
-   One continuous shot, fullscreen, no text.
-
-   Three things make it work:
-   - a global camera (pan and zoom) for moves where everything has
-     to travel together: the descent, and going into the flask
-   - per element offset, scale and rotation for the morphs
-   - painter's order compositing, so things can pass in front of
-     other things instead of dissolving into them
-
-   Every keyframe is evaluated once per frame, not once per cell.
-   At 150 by 51 that is the difference between 25 interpolations
-   and 191,000 of them.
-   ============================================================ */
+/* 6. PROLOGUE */
 (function prologue(){
 
-  /* ============================================================
-     INTRO ON / OFF.  One word.
-     false  the site loads immediately, no intro, no scroll track
-     true   the ASCII intro plays first
-     ============================================================ */
+  /* INTRO ON / OFF.  One word. */
   const INTRO = true;
 
   const el   = document.getElementById("prologue");
@@ -2777,9 +3140,8 @@ if (!touch && PREVIEW !== "off") {
 
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  /* Only an explicit skip suppresses the intro, and only for this tab session.
-     Watching it through does not. An earlier build persisted forever in
-     localStorage, which meant it silently stopped playing after one view. */
+  /* Only an explicit skip suppresses the intro, and only for this tab session. Watching it
+     through does not. */
   const KEY = "mx30-intro-v2";
   try { localStorage.removeItem("mx30-prologue"); } catch (e) {}
   const qs = new URLSearchParams(location.search);
@@ -2788,13 +3150,8 @@ if (!touch && PREVIEW !== "off") {
   else if (qs.get("intro") === "0"){ seen = true; }
   else { try { seen = sessionStorage.getItem(KEY) === "seen"; } catch (e) {} }
 
-  /* body.lit is what takes every .rise element from opacity 0 to 1, and this
-     branch was the one exit from the prologue that never set it. Skip the intro
-     once and reload in the same tab, or arrive with ?intro=0, and the headline,
-     the subtitle, the legend and all eight rows stayed invisible: the whole page
-     was blank apart from the rail and the footer. Reduced motion happened to be
-     covered by a CSS rule that pins .rise open; the session case was not
-     covered by anything. */
+  /* body.lit is what takes every .rise element from opacity 0 to 1, and this branch was the
+     one exit from the prologue that never set it. */
   if (reduce || seen){
     el.remove(); road.remove(); if (skip) skip.remove();
     document.body.classList.add("lit");
@@ -2804,17 +3161,16 @@ if (!touch && PREVIEW !== "off") {
   const ink = document.getElementById("layerInk");
   const hot = document.getElementById("layerHot");
 
-  /* ONE SIGNAL FOR "THE INTRO IS ON SCREEN".
-     The prologue is an opaque fullscreen white layer, so while it is up nothing
-     behind it can be seen. Two other loops need to know that: the merge loop was
-     calling getComputedStyle on this element and reading two properties on every
-     animation frame, which forces a style recalculation sixty times a second for
-     the whole life of the page, and the ASCII ground was rendering a full grid
-     ten times a second behind an opaque overlay. A class on the root element is
-     an O(1) test that forces nothing. */
+  /* ONE SIGNAL FOR "THE INTRO IS ON SCREEN". The prologue is an opaque fullscreen white
+     layer, so while it is up nothing behind it can be seen. */
   const root = document.documentElement;
   const showIntro = on => root.classList.toggle("intro", on);
   showIntro(true);
+
+  /* The haptic field used to live here, driven by pointer travel while the
+     prologue was up. It is gone: a pulse under a moving cursor is noise the
+     hand did not ask for. It is driven by scroll distance now, next to the
+     other scroll work in section 2b. */
 
   function kf(p, s){
     if (p <= s[0][0]) return s[0][1];
@@ -3030,18 +3386,8 @@ if (!touch && PREVIEW !== "off") {
     return P;
   }
 
-  /* THE END OF THE INTRO.
-
-     The throne zoom finishes on a timer, not on scroll. Then the runway is
-     deleted from the document outright and the index is put at the top.
-
-     Every previous attempt tried to scroll across the leftover runway
-     correctly. Deleting it means there is no leftover runway to cross, so a
-     blank stretch is not something that can happen. */
-  /* Landing parks the intro rather than deleting it. The runway stays in the
-     document so you can scroll back up through the whole animation; p is
-     measured against the full runway, so p 1.0 is exactly the index seated at
-     the top and there is no dead stretch between them either way. */
+  /* THE END OF THE INTRO. The throne zoom finishes on a timer, not on scroll. */
+  /* Landing parks the intro rather than deleting it. */
   function land(){
     if (landed) return;
     landed = true;
@@ -3122,13 +3468,7 @@ if (!touch && PREVIEW !== "off") {
   })(performance.now());
 })();
 
-/* ============================================================
-   7. CURSOR
-   A plain glass bead. One element, one backdrop-filter, no mask and
-   no filter on it. The metaball version stacked mask, backdrop-filter
-   and drop-shadow on a single composited layer, which tore on the GPU
-   and took the cursor with it when it failed.
-   ============================================================ */
+/* 7. CURSOR */
 (function cursor(){
   if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
   const dot = document.getElementById("cur");
@@ -3152,22 +3492,6 @@ if (!touch && PREVIEW !== "off") {
   addEventListener("pointerleave", () => dot.classList.remove("live"), { passive:true });
   addEventListener("pointerenter", () => { if (seeded) dot.classList.add("live"); }, { passive:true });
 
-  /* THE ROW LENS THAT USED TO LIVE HERE IS GONE.
-     This grew a clip-path from the bead's position out to the full glass pane,
-     to reveal a live iframe preview underneath, and toggled .merged on the bead
-     past the halfway point of that growth, which fires `#cur.merged i{opacity:0}`.
-
-     Every card shows its own picture now; there is no pane to reveal. But the
-     growth still ran on every hover, timed from the moment the pointer entered
-     a card rather than from its distance to any edge, so within about half a
-     second of your pointer landing anywhere inside a card, moved or not, the
-     real bead vanished. That is what "the cursor goes missing over the preview
-     images" and "behaves differently from above than from below" both were:
-     not a rendering bug, a five-line state machine nobody needed any more.
-
-     What the frame edge does now is handled entirely by THE MERGE, further
-     down, the same mechanism the nav bar and the pills already use: proximity
-     driven, not time driven, and it never touches this bead's opacity. */
 
   (function loop(){
     requestAnimationFrame(loop);
@@ -3178,11 +3502,7 @@ if (!touch && PREVIEW !== "off") {
   })();
 })();
 
-/* ============================================================
-   11. RAIL MORPH
-   Full bleed at the top of the index, a floating capsule once you
-   are into the projects.
-   ============================================================ */
+/* 11. RAIL MORPH */
 (function railMorph(){
   const rail = document.getElementById("rail");
   if (!rail) return;
@@ -3210,26 +3530,13 @@ if (!touch && PREVIEW !== "off") {
   check();
 })();
 
-/* ============================================================
-   8. DEV PANEL
-   Type ddsd to show or hide. Everything the glass does is a CSS
-   variable or a filter attribute, so it is all live here rather
-   than a round trip through me.
-   ============================================================ */
+/* 8. DEV PANEL */
 (function dev(){
   const panel = document.getElementById("dev");
   const rows  = document.getElementById("devRows");
   if (!panel || !rows) return;
 
-  /* THE SECOND SOURCE OF TRUTH, CLOSED.
-     These defaults are not documentation, they are live: every slider calls
-     apply() once while it is being built, so on every page load this block
-     overwrites both the :root tokens AND the three feDisplacementMap scale
-     attributes, whether or not the panel is ever opened. That is why the file
-     could carry scale="56" in the markup and still render 19/14/9, and why
-     --glass-spec could read 0.90 with 0.8 written at the top: the numbers here
-     silently won, and any edit made only at the top of the file did nothing.
-     They now match the LOCKED block exactly. Change both together or neither. */
+  /* THE SECOND SOURCE OF TRUTH, CLOSED. */
   const S = [
     { k:"radius",  label:"Roundness",   min:0,   max:36,  step:1,    def:18,   unit:"px", css:"--glass-radius" },
     { k:"edge",    label:"Inset",       min:0,   max:40,  step:1,    def:18,   unit:"px", css:"--glass-edge" },
@@ -3249,30 +3556,6 @@ if (!touch && PREVIEW !== "off") {
   const val = {};
 
   let flip = false;
-  /* THE BEAD USED TO GET ITS OWN SCALE HERE.
-     A calibrated proportional rule wrote a second displacement triple onto a
-     duplicate filter, #gcBead, so the bead could run a gentler throw than the
-     frames. The sweep behind that calibration is still worth keeping, because it
-     settles a question this file argued about for three rounds. Measured on a
-     real 31px circle over a 6px black and white ruling: the bend in the outer
-     band, the disturbance in the middle that must stay at zero, and the fraction
-     of the disc that goes flat because a pass sampled past its own edge.
-
-         G scale    edge bend    centre    flat
-            2.42          8.4       0.0    2.3%     invisible
-            8.0          31.3       0.0    3.8%     visible
-           14.0          45.3       0.0    4.2%     strong
-           16.0          92.9       0.0    3.8%     strong, still clean
-           24.0         100.4       0.0    4.2%     ceiling
-           56.0          44.2      11.6    3.0%     centre breaking up
-
-     The centre column is the finding. It holds at 0.0 the whole way to 24 and
-     only smears at 56, and even there the flat fraction is 3%. A 31px bead can
-     carry the page's own 56/50/44; the clamping three rounds of comments worried
-     about starts well past where anyone would set the slider. So there is no
-     second scale to write, no duplicate filter to keep in sync, and no
-     reference size to calibrate. See THE SAME MATERIAL, THE SAME FILTER
-     INSTANCE in the stylesheet for the other half of why the duplicate went. */
   function apply(s){
     if (s.css){ document.documentElement.style.setProperty(s.css, val[s.k] + s.unit); return; }
     if (!s.filt) return;
@@ -3284,24 +3567,9 @@ if (!touch && PREVIEW !== "off") {
     R.setAttribute("scale", base + d);
     G.setAttribute("scale", base);
     B.setAttribute("scale", Math.max(0, base - d));
-    /* Refraction and Chromatic used to also drive a card-only instance here,
-       gcCardA/gcCardXA and their four displacement ids. Removed along with the
-       filters themselves: see THE CARD LENS, TRIED AND REMOVED, in the tokens
-       at the top of the stylesheet. Cards read --card-frost only now, which is
-       its own slider below, not this one. */
-    /* Chrome resolves a backdrop-filter url() once and ignores later edits to
-       that filter. Renaming it and repointing the reference forces a fresh
-       resolve, which is the only thing that makes this slider live.
-
-       WRITING IT INLINE ALSO HAD TO STOP DEFEATING THE NO-LENS GUARDS.
-       WHEN THERE IS NO LENS empties --glass-filter from a stylesheet rule, and
-       an inline property on the same element beats any stylesheet rule, so once
-       this function had run even once, Safari kept a dangling url() in its
-       backdrop-filter. Measured with html.no-lens forced: the nav bar still
-       computed url("#gcB"). That is the exact failure that block exists to
-       prevent, reintroduced by the dev panel from the other side. If there is
-       no lens the reference is written empty rather than skipped, because
-       skipping would leave the last good url() sitting in the inline style. */
+    /* Chrome resolves a backdrop-filter url() once, so editing a filter it has already
+       resolved does nothing until the reference itself changes. Hence the id flip on every
+       edit. */
     flip = !flip;
     const gid = flip ? "gcB" : "gcA";
     f.setAttribute("id", gid);
@@ -3309,14 +3577,10 @@ if (!touch && PREVIEW !== "off") {
       !CSS.supports("backdrop-filter", "url(#x)");
     document.documentElement.style.setProperty(
       "--glass-filter", noLens ? "" : "url(#" + gid + ")");
-    /* Written empty rather than skipped when there is no lens, same as above: an
-       inline property beats the stylesheet rule that empties it, so skipping
-       would leave a dangling url() in Safari's computed backdrop-filter and
-       take the frost and the saturate down with it.
-
-       This used to also rename and republish a second, card-only filter here.
-       Gone along with the filter it drove: cards have no lens to flip any more,
-       see THE CARD LENS, TRIED AND REMOVED in the tokens at the top. */
+    /* Written empty rather than skipped when there is no lens, same as above: an inline
+       property beats the stylesheet rule that empties it, so skipping would leave a
+       dangling url() in Safari's computed backdrop-filter and take the frost and the
+       saturate down with it. */
   }
 
   S.forEach(s => {
@@ -3366,20 +3630,7 @@ if (!touch && PREVIEW !== "off") {
   });
 })();
 
-/* THE ACCENT.
-   Cycles the blue across code, design and play. The colour transition already
-   lives on `h1 em` at .7s, so a class is all this has to move.
-
-   This was switched off at some point with a note saying it cycled every 1.7s
-   and was constant motion competing with the rest of the page, which was a fair
-   objection. It is back, with three answers to it. HOLD is 2400ms rather than
-   1700, so the colour actually settles between moves. It does not run while the
-   masthead is off screen, which is the whole time you are reading the index, and
-   the h1 sits below the intro's scroll track so this also keeps it still for the
-   whole prologue. And under prefers-reduced-motion it does not run at all: the
-   accent pins to the first word, which is exactly what it has been doing.
-
-   HOLD is the only number to touch. */
+/* THE ACCENT. Cycles the blue across code, design and play. */
 (function accent(){
   const words = Array.from(document.querySelectorAll("h1 em.cyc"));
   if (!words.length) return;
@@ -3416,35 +3667,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
   location.href = location.pathname + "?intro=1";
 });
 
-/* ============================================================
-   12. THE MERGE
-   One signed distance field, rectangle smooth unioned with the cursor, exactly
-   the contract in the spec: field() returns the signed distance to the MERGED
-   silhouette, and uK is the only thing that makes them merge.
-
-   Targets: the navigation bar, the row's left text pane and right preview
-   pane, the Reach out capsule and the Replay button.
-
-   WHY IT IS BUILT THIS WAY. The glass here is CSS, not a shader: a tint
-   gradient, a backdrop-filter carrying the lens, and two inset edge lights.
-   An element cannot paint outside its own box, so the neck and the bead cannot
-   come from the target, and the target cannot be replaced because it is
-   carrying its own text. So the merged body is drawn as the target (untouched)
-   plus one bridge layer holding the merged silhouette MINUS the target's
-   rectangle. Subtracting is what matters: no pixel ever gets two
-   backdrop-filters, so the neck cannot read as a second, denser object.
-
-   The bridge declares no material at all. It reads the target's own computed
-   background and backdrop-filter every frame and copies them, so the glass is
-   still defined in exactly one place, on the objects, and the dev panel keeps
-   driving all of it.
-
-   Two consequences worth knowing. The bridge's box is the tight bounding box
-   of the blob, which is what keeps the lens correct: the filter region scales
-   with the silhouette the same way it does for the 48px bead in its own 48px
-   box. And the bead hands over to the bridge while they are still identical
-   circles, at gap 64, so the handoff has nothing to see.
-   ============================================================ */
+/* 12. THE MERGE */
 (function merge(){
   if (!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -3466,9 +3689,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
   const nib = dot.firstElementChild;
 
   /* ---- THE DRIVER ---- */
-  /* MEASURED, not a literal. This was a hardcoded 48 while the cursor loop
-     measured the element, so raising the --bead token made the bridge draw a
-     48px bead where a 62px one actually was, and the handoff popped. */
+  /* MEASURED, not a literal. */
   let BEAD = dot.offsetWidth || 31;
   addEventListener("resize", () => { BEAD = dot.offsetWidth || BEAD; }, { passive:true });
   const IN    = 64;    /* gap at which merging begins, px, edge to edge */
@@ -3485,10 +3706,6 @@ document.getElementById("replay")?.addEventListener("click", () => {
                           difference between mercury and a union operator. */
   const EAT   = 0.17;  /* how much of the bead the target takes as it swallows
                           it, so the merged body does not visibly gain mass */
-  /* The bridge no longer tucks 2.2px under the target to hide its edge light,
-     because two backdrop-filters on the same pixel is what drew the dark wedge
-     across the neck. The target's light is cut instead, and this is only the
-     sub-pixel overlap that stops two antialiased edges leaving a hairline. */
   const TUCK  = 0.75;
   const CUTK  = 0.95;  /* mouth radius as a share of the smoothing radius */
 
@@ -3622,39 +3839,9 @@ document.getElementById("replay")?.addEventListener("click", () => {
     return true;
   }
 
-  /* THE FALLBACK LENS, WITHOUT THE LENS.
-     This used to hand a candidate with no backdrop-filter of its own the
-     page's real --glass-filter, the full feDisplacementMap, reasoning that
-     the cost is only ever paid by the one shared bridge element. True, but
-     cost was never the problem here, shape was. The bridge's box is the
-     TIGHT bounding box of the merged silhouette, which over a card edge is
-     often a thin sliver a few px tall, thinner than the bead. Any live
-     displacement on a shape that thin samples past its own edge on almost
-     every pixel, which is the solid yellow-green patch that showed up
-     merging into a card. Turning the filter down (see the material tokens
-     above) helps the bead; it does not save a sliver a few px tall, no
-     scale is small enough for that.
-     So the bridge now falls back to blur, saturate and brightness only, the
-     same three the cards themselves already carry per THE CARD'S REFRACTION
-     below: magnitude effects with no notion of a sample point, so there is
-     nothing for a thin box to clip. Cards keep their tint, both edge lights
-     and their contact shadow through a merge exactly as before; what they
-     never get, merged or not, is a live per-pixel bend.
-
-     AND NOW IT IS UNCONDITIONAL, WHICH IS WHAT THE PARAGRAPH ABOVE ALREADY
-     ARGUED FOR. The code under it did something narrower: it reached for the
-     target's own backdrop-filter first and only fell back when there wasn't
-     one. Cards have no filter so they took the safe path, but the nav bar and
-     both pills DO have one, so they handed the bridge the page's real
-     56/50/44 displacement and walked straight into the failure this comment
-     describes. Measured, bead parked on the rail's top edge: 55% of the disc
-     inside the glass came back darker than -6, median -7.7, worst -29, and the
-     heat map put it in a band along the rail edge where the bridge box is a
-     few px tall. "No scale is small enough for that" is true for every
-     candidate, not just the ones that happen to lack a filter, so the target's
-     filter is no longer consulted at all. One line, and it is the difference
-     between a bridge that clamps to dark patches over the nav bar and one that
-     does not. */
+  /* THE FALLBACK LENS. A candidate with no backdrop-filter of its own gets blur, saturate
+     and brightness, never a borrowed displacement map: a map anchored for another box
+     clamps to dark patches on a shape as thin as the bridge. */
   const fallbackBF = "blur(var(--glass-blur)) " +
     "saturate(var(--glass-sat)) brightness(var(--glass-bright))";
   /* Pulled out of refresh() so the intro's own fast path, below, can build one
@@ -3666,52 +3853,18 @@ document.getElementById("replay")?.addEventListener("click", () => {
     if (cs.display === "none" || cs.visibility === "hidden") return null;
     if (parseFloat(cs.opacity) < 0.92) return null;
     if (isPane && !paneOpen(cs.clipPath)) return null;   /* still opening, leave it alone */
-    /* THE BRIDGE CARRIES WHAT THE BEAD CARRIES.
-       This read `const bf = fallbackBF` for a round, no displacement at all, so
-       the cursor stopped refracting the instant it merged with anything and
-       started again when it left. That reads as the cursor changing its own
-       appearance on approach, and making the two ends of a merge out of
-       different material is the one thing this module exists to prevent.
-
-       So the bridge takes the page map, same as the bead, the pills, the ring and
-       the nav bar. The old worry stands and is worth keeping: a bevel map anchors
-       its ramp a fixed percentage in from each edge, and the bridge box is
-       sometimes a sliver a few px tall, where those anchors land on top of each
-       other and clamp. The target's own filter is still never consulted, for the
-       reason below. If a flat patch ever shows up mid-merge over a card edge,
-       this line is where it comes from, and Refraction in the dev panel is the
-       knob, not a second filter. */
+    /* The bridge carries the bead's own filter, not the target's. */
     const bf = "var(--glass-filter) " + fallbackBF;
     const rad = parseFloat(cs.borderTopLeftRadius);
-    /* WHOSE GEOMETRY MOVES UNDER THE PAGE, AND WHOSE DOES NOT.
-       The loop below used to call getBoundingClientRect() on all eleven
-       candidates plus .frame on all eight rows, every frame, which is twenty
-       one forced layout reads a frame, and one in six of them landed
-       immediately after the ASCII ground rewrote twenty thousand characters of
-       <pre>, which turns a cheap read into a full document layout.
-
-       A card's box does not change while you scroll, only its position on
-       screen does, and that is arithmetic: document position minus scroll. So a
-       static candidate is measured once per refresh, in document coordinates,
-       and converted per frame for free. The rail is position:sticky and #skip
-       is position:fixed, so their DOCUMENT position is what changes while the
-       viewport stays put, and those two have to be read live. cs is already in
-       hand here, so knowing which is which costs nothing. */
+    /* Candidate geometry is cached in document coordinates and converted per frame. Only
+       sticky and fixed candidates are re-measured live. */
     const pos = cs.position;
     const live = pos === "sticky" || pos === "fixed";
-    /* THE INNER EDGE. A card is not a filled rectangle, it is a ring: its own
-       outer edge, and the picture's edge nine pixels in. Every candidate that
-       has a .frame carries a reference to it and to its own radius, read once
-       here rather than every frame, since a border-radius token does not
-       change without a resize. Everything that makes the ring's second
-       boundary react is downstream of these two extra fields; nothing else
-       about a plain candidate like a pill or #skip changes. */
+    /* THE INNER EDGE. A card is not a filled rectangle, it is a ring: its own outer edge,
+       and the picture's edge nine pixels in. */
     const inner = el.classList.contains("row") ? el.querySelector(".frame") : null;
     const radIn = inner ? parseFloat(getComputedStyle(inner).borderTopLeftRadius) : 0;
-    /* backgroundImage alone was not the material. Reach out carries its blue
-       as a gradient but the pills and the rail can carry a colour underneath
-       it, and a bridge that copied only the image showed the page through
-       where the target showed paint. */
+    /* backgroundImage alone was not the material. */
     return { el, rad: isFinite(rad) ? rad : 0,
              bg: cs.backgroundImage, bgc: cs.backgroundColor, bf, live,
              inner, radIn: isFinite(radIn) ? radIn : 0 };
@@ -3784,17 +3937,9 @@ document.getElementById("replay")?.addEventListener("click", () => {
     if (!dot.classList.contains("live")) return off();
     if (document.documentElement.classList.contains("booting")) return off();
 
-    /* THE INTRO IS AN OPAQUE FULLSCREEN LAYER, so the nav bar, the pills and
-       every card behind it are genuinely unreachable, and checking all eleven
-       of them every sixth tick during that stretch was wasted work. But #skip
-       sits ON TOP of the prologue, not behind it, at z-index 101 against the
-       prologue's own 100, and it is the one interactive thing meant to be used
-       while the intro is playing. Returning off() unconditionally here is what
-       silently excluded it: candidates were never even built, let alone
-       checked, so #skip could never merge no matter how close the bead got.
-       During the intro this checks exactly one element instead of eleven,
-       which is cheaper than the normal path, not more expensive, and #skip
-       behaves like every other pill again. */
+    /* THE INTRO IS AN OPAQUE FULLSCREEN LAYER, so the nav bar, the pills and every card
+       behind it are genuinely unreachable, and checking all eleven of them every sixth tick
+       during that stretch was wasted work. */
     const inIntro = document.documentElement.classList.contains("intro");
     if (inIntro){
       if (!(tick++ % 6)){
@@ -3807,11 +3952,6 @@ document.getElementById("replay")?.addEventListener("click", () => {
       const cs = getComputedStyle(document.documentElement);
       const sp = parseFloat(cs.getPropertyValue("--glass-spec"));
       spec = isFinite(sp) ? sp : 0.9;
-      /* same read as spec, same cadence: the shadow ratio used to be two
-         numbers hardcoded on #mgFill's own filter, decoupled from the token
-         the bead's box-shadow actually uses. Now both floods scale off the
-         one --glass-shadow value, at the ratio that reproduces the old
-         hardcoded look (.30 and .16) at the token's own default (.12). */
       const sh = parseFloat(cs.getPropertyValue("--glass-shadow"));
       shadowTok = isFinite(sh) ? sh : 0.12;
     }
@@ -3822,19 +3962,8 @@ document.getElementById("replay")?.addEventListener("click", () => {
     const cx = db.left + db.width / 2, cy = db.top + db.height / 2;
     const R0 = BEAD * bs / 2;                /* the bead's own radius */
 
-    /* gap is edge to edge. For a plain candidate (a pill, the nav bar) that is
-       still the nearest point on one rectangle, minus R. For a card it is the
-       nearest point on the RING those two rectangles form, which is the whole
-       fix: the old version measured distance to the outer rectangle only, so
-       the instant the bead was anywhere inside a card, gap read as roughly -R
-       and stayed there all the way to the middle of the photograph. Nothing
-       downstream could tell "just inside the frame" from "dead centre of the
-       picture," so the inner edge never had anything to react to. Measuring
-       against max(distance to outer, -(distance to inner)) is the standard
-       signed-distance trick for a rectangular ring: it reads as approaching
-       glass near either boundary and grows the moment you are simply looking
-       at the photograph, which is what lets it fall back to a plain bead
-       there instead of staying permanently "touching." */
+    /* gap is edge to edge. For a plain candidate (a pill, the nav bar) that is still the
+       nearest point on one rectangle, minus R. */
     let T = null, box = null, boxIn = null, gap = Infinity;
     /* one read of the scroll offset for the whole loop, and the only one */
     const sX = scrollX, sY = scrollY;
@@ -3843,9 +3972,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
       if (c.live) measureCand(c);        /* sticky and fixed: see WHOSE GEOMETRY */
       if (!(c.w > 0)) continue;          /* never measured, or display:none since */
       if (c.w < 6 || c.h < 6) continue;
-      /* THE CULL COMES FIRST NOW. It used to sit after the rect read, so an
-         off-screen card was paying full price to be thrown away, and the eight
-         rows are off-screen most of the time. Numbers only, no layout. */
+      /* THE CULL COMES FIRST NOW. Numbers only, no layout. */
       const rt = c.dt - sY, rb = rt + c.h;
       if (rb < -80 || rt > innerHeight + 80) continue;
       const rl = c.dl - sX, rr = rl + c.w;
@@ -3879,16 +4006,11 @@ document.getElementById("replay")?.addEventListener("click", () => {
 
     const t = Math.max(0, Math.min(1, 1 - gap / IN));   /* closeness, 0 to 1 */
 
-    /* The smoothing radius scales with the bead rather than sitting at a fixed
-       52px, so pressing fattens the neck instead of leaving it the same width
-       around a bigger body. It also rises faster than it falls, which is what
-       makes the neck stretch thin and break late on the way out. */
+    /* The smoothing radius scales with the bead rather than sitting at a fixed 52px, so
+       pressing fattens the neck instead of leaving it the same width around a bigger body. */
     const kWant = KREL * R0 * t;
     kS += (kWant - kS) * (kWant > kS ? 0.34 : 0.11);
-    /* CLAMPED TO THE TARGET, not just the bead. A fillet larger than the thing
-       it is filleting does not round a corner, it swallows the object: at a 67px
-       smoothing radius the Reach out pill, 44px tall, became a balloon and the
-       lens smeared its label out through the neck. */
+    /* CLAMPED TO THE TARGET, not just the bead. */
     const K = Math.min(kS, Math.min(box.width, box.height) * 0.55);
 
     /* the target swallows part of the bead as it absorbs it, so the merged body
@@ -3899,13 +4021,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
     const rhx = box.width / 2, rhy = box.height / 2;
     const rad = Math.min(T.rad, Math.min(rhx, rhy));
 
-    /* THE RING ITSELF. Everything past this point — the mouth, the
-       anticipation bulge, the seam the rim breaks along — was already written
-       generically against "the target's own distance field," so none of it
-       needed to change to gain a second boundary. It only needed to be handed
-       one that has two: max(distance to outer, -(distance to inner)) is
-       negative inside the glass band, and positive both outside the whole card
-       and inside the picture, which is exactly the shape a ring is. */
+    /* THE RING ITSELF. */
     let fRect;
     if (boxIn){
       const icx = (boxIn.left + boxIn.right) / 2, icy = (boxIn.top + boxIn.bottom) / 2;
@@ -3924,10 +4040,8 @@ document.getElementById("replay")?.addEventListener("click", () => {
       const u = u0 < 0 ? 0 : u0 > 1 ? 1 : u0;
       return 1 - u * u * (3 - 2 * u);
     }
-    /* ANTICIPATION. The silhouette's rectangle leans out toward the bead before
-       contact, falling off with distance. Only the SILHOUETTE bulges: the
-       subtraction below still uses the true rectangle, because the target paints
-       its true rectangle and the bridge has to own everything outside it. */
+    /* ANTICIPATION. The silhouette's rectangle leans out toward the bead before contact,
+       falling off with distance. */
     const bulge = PULL * t * t * t;
     const fRectS = bulge < 0.02 ? fRect
                  : (x, y) => fRect(x, y) - bulge * mouth(x, y);
@@ -3946,17 +4060,9 @@ document.getElementById("replay")?.addEventListener("click", () => {
     const seam = (x, y) => (fRect(x, y) + TUCK * mouth(x, y)) < 0.9;
 
     const reach = R + Math.max(0, gap) + K + bulge + 16;
-    /* THE GRID, AND WHAT IT ACTUALLY BUYS.
-       reach/24 gives a fixed 48 by 48 grid whatever the blob's size, so this
-       evaluated the field about 2,500 times a frame, every frame, through three
-       nested closures. reach/18 is 38 across, 1,444 evaluations, which is 42%
-       less work for the same silhouette: marching squares interpolates linearly
-       along each cell edge, and the error on a smooth signed distance field goes
-       with the square of the cell against the local curvature, so the place to
-       watch is the neck, where curvature is highest. At the smoothing radii this
-       page uses, K is tens of pixels, and a 3px cell is well inside that.
-       If a neck ever reads faceted on the way out of a merge, this is the one
-       number to put back, and 24 is where it was. */
+    /* THE GRID, AND WHAT IT ACTUALLY BUYS. reach/24 gives a fixed 48 by 48 grid whatever
+       the blob's size, so this evaluated the field about 2,500 times a frame, every frame,
+       through three nested closures. */
     const cell  = Math.max(2.6, reach / 18);
     const n     = Math.ceil(2 * reach / cell) + 2;
     const rings = march(G, cx - reach - cell, cy - reach - cell, cell, n, n);
@@ -3978,10 +4084,9 @@ document.getElementById("replay")?.addEventListener("click", () => {
        is what made the cursor disappear over links. */
     if (!isFinite(x0)){ setBead(false); hide(); clearCut(); return; }
 
-    /* the box is the TIGHT bounding box of the blob, and that is what keeps the
-       lens honest: the filter region scales with the silhouette exactly as it
-       does for the 48px bead in its own 48px box. 1px of pad, only so the rim
-       stroke is not clipped by the edge. */
+    /* the box is the TIGHT bounding box of the blob, and that is what keeps the lens
+       honest: the filter region scales with the silhouette exactly as it does for the 48px
+       bead in its own 48px box. */
     const ox = x0 - 1, oy = y0 - 1, W = (x1 - x0) + 2, H = (y1 - y0) + 2;
 
     /* ---- one pass, two strings. The rim reuses the fill's exact curves so the
@@ -4012,11 +4117,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
       }
       dF += "Z";
 
-      /* THE LIGHT, off the contour's own normal rather than off a position ramp.
-         The rings wind with the interior on the LEFT of travel, so the outward
-         normal of the chord (dx,dy) is (-dy,dx) and a segment faces the light
-         when that normal points up the screen. Segments belong to one stroke or
-         the other, never both, so the two never sum on the same pixel. */
+      /* THE LIGHT, off the contour's own normal rather than off a position ramp. */
       let openR = false, openL = false;
       for (let i = 0; i < len; i++){
         if (sm[i]){ openR = openL = false; continue; }
@@ -4043,11 +4144,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
 
     setBead(true);
 
-    /* THE MOUTH. The target's own edge light is cut where the neck arrives, so
-       the outline of the merged body is one continuous contour: this stroke
-       around the bead and the neck, the target's own light around the target,
-       and neither of them across the join. That crossing pair of strokes was
-       the whole reason the neck read as two objects touching. */
+    /* THE MOUTH. */
     setCut(T.el, cx - box.left, cy - box.top, R + K * CUTK);
 
     /* THE GLASS, read off the target, never redeclared. The gradient is pinned
@@ -4065,9 +4162,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
     fill.style.backgroundPosition = (box.left - ox).toFixed(1) + "px " + (box.top - oy).toFixed(1) + "px";
 
     /* Everything above is computed in viewport space, because that is what
-       getBoundingClientRect and the pointer both speak. The two layers are
-       positioned in DOCUMENT space, so the scroll offset is added here and only
-       here. Path data stays relative to ox/oy and is unaffected. */
+       getBoundingClientRect and the pointer both speak. */
     const px = (ox + scrollX).toFixed(1), py = (oy + scrollY).toFixed(1);
     fill.style.left = px + "px";  fill.style.top = py + "px";
     fill.style.width = W.toFixed(1) + "px"; fill.style.height = H.toFixed(1) + "px";
@@ -4082,37 +4177,8 @@ document.getElementById("replay")?.addEventListener("click", () => {
     rimP.setAttribute("d", dR);
     if (rimL) rimL.setAttribute("d", dL);
 
-    /* THE SHADOW, ROUND FOUR. Sized and positioned exactly like the rim, and
-       fed the same dF this frame, so the silhouette matches pixel for pixel.
-
-       Round three added feComposite operator="out" against SourceAlpha inside
-       the filter, which stopped the shadow painting across the silhouette's own
-       interior. That fixed most of it, measured -22.1 mean to -9.1 mean on the
-       nav bar, but not all, and the residue has a different cause worth naming.
-
-       dF is a LOCAL contour. The field is marched over a window around the bead,
-       so what it traces is the hump plus a seam segment running along the
-       target's own boundary; the target's body is not inside dF at all. The
-       filter's punch therefore protects the hump and protects nothing below the
-       seam, and the shadow is blurred by 5 and offset DOWN by 4, so it lands a
-       few px inside the target. Worst pixel sat at y=25 with the rail's top edge
-       at y=24. A contact shadow cast onto the inside of the very object it is
-       merging with, which is the last of the mud.
-
-       So the target's own rounded rect is punched out too. It cannot go in the
-       filter: the blur input has to stay the silhouette alone or the target
-       would grow a second shadow of its own, so the punch needs a shape the
-       filter does not also blur. CSS applies filter first and clip-path second,
-       to the result, which is exactly the order needed here.
-
-       This is a clip-path on the shadow layer, which round two correctly warned
-       against, and the distinction matters: round two clipped TO the silhouette,
-       so the clip removed the very blur the filter had just grown outside it.
-       This clips to everything EXCEPT the target, an enormous region, so every
-       pixel of blur outside the target survives untouched and only the pixels
-       that were never legitimate are dropped. evenodd makes the second subpath
-       a hole; the outer rect is padded well past the filter region so nothing
-       real is caught by its edge. */
+    /* THE SHADOW, ROUND FOUR. Sized and positioned exactly like the rim, and fed the same
+       dF this frame, so the silhouette matches pixel for pixel. */
     if (shSvg && shPath){
       shSvg.style.left = fill.style.left; shSvg.style.top = fill.style.top;
       shSvg.setAttribute("width", W.toFixed(1));
@@ -4142,10 +4208,9 @@ document.getElementById("replay")?.addEventListener("click", () => {
       shSvg.style.clipPath = shClip;
       shSvg.style.webkitClipPath = shClip;
     }
-    /* The same two lights every other surface carries, but split the way the
-       panes split them: a dim ring everywhere at 0.62 of the edge light, and the
-       full edge light only where the contour faces up. Driven by the merged
-       silhouette, so the neck is lit as one body. */
+    /* The same two lights every other surface carries, but split the way the panes split
+       them: a dim ring everywhere at 0.62 of the edge light, and the full edge light only
+       where the contour faces up. */
     grad.setAttribute("y1", (lo - oy).toFixed(1));
     grad.setAttribute("y2", (hi - oy).toFixed(1));
     gA.setAttribute("stop-opacity", (spec * 0.62).toFixed(3));
