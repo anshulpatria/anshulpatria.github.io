@@ -743,27 +743,132 @@ h1 em.lit-word{ color:var(--signal); }
 }
 
 /* ---------- responsive ----------
-   The composition collapses in two steps. At 1080 the twelve column grid halves,
-   so a 7 and a 5 become two full width tiles rather than two thin ones, and the
-   spans are overridden rather than the tiles rewritten. Below 720 it is one
-   column and every tile takes the same 3:2 frame, because a portrait tile and a
-   square tile stacked on a phone read as an accident. */
-@media (max-width:1080px){
-  .index{ grid-template-columns:repeat(6, minmax(0, 1fr)); }
-  .row{ grid-column:span 6; }
-  .name{ font-size:clamp(24px, 6cqi, 44px); }
+   THE COLLAPSE, AND WHY IT USED TO HAPPEN TOO EARLY.
+
+   This block read: at 1080 the twelve column grid halves, so "a 7 and a 5
+   become two full width tiles rather than two thin ones". That was true of the
+   composition it was written for. The spans in PROJECTS are 12 and 6 now, so
+   halving the grid to six columns AND forcing every row to span 6 made every
+   tile full width at 1080. That is iPad landscape at 1024 and iPad Air at 1180
+   spending an entire viewport width on one card, and the pairing that makes the
+   page read as composed rather than as a list was gone at the first width where
+   anyone would have noticed it.
+
+   The pairs survive to 900 instead. Below that a half tile is under 430px and
+   the name starts fighting the Open button for the same track, which is the
+   real reason to give the pairing up, and it happens at a width where one
+   column is the better shape anyway.
+
+   The aspect override was the worse half of the same bug. It only fired at 720,
+   so between 721 and 1080 a tile was full width and STILL wearing its data
+   aspect. Line Visualizer and Artboard 42 are 4/5: at 1000px wide that is a
+   1250px tall card, taller than the screen showing it, and two of them in a
+   row. Aspect is normalised at exactly the width the grid becomes one column
+   now, so the two can no longer disagree about what shape a tile is. */
+@media (max-width:1200px){
+  /* still pairs here, just tighter. The step is on the container query unit, so
+     the name tracks its own tile's width rather than the window's. */
+  .name{ font-size:clamp(23px, 7.6cqi, 40px); }
 }
-@media (max-width:720px){
-  .index{ grid-template-columns:1fr; gap:calc(var(--tile-gap) * 1.4); }
+@media (max-width:900px){
+  .index{ grid-template-columns:1fr; gap:calc(var(--tile-gap) * 1.35); }
   .row{ grid-column:1 / -1; }
+  /* One column, one frame. A 4/5 tile and a 16/9 tile stacked read as an
+     accident, and 3:2 is the shape most of these screenshots already are. */
   .frame{ aspect-ratio:3 / 2 !important; }
   .txt{ container-type:normal; }
-  .name{ font-size:clamp(26px, 7vw, 40px); }
-  .myth, .desc{ font-size:13px; }
+  .name{ font-size:clamp(26px, 4.4vw, 42px); }
   h1{ max-width:none; }
 }
+@media (max-width:720px){
+  .name{ font-size:clamp(25px, 6.6vw, 38px); }
+  .myth, .desc{ font-size:13px; }
+}
+
+/* ---------- 320 to 400 ----------
+   .row-in is the thing that gives out first. It is two tracks, text and the
+   Open button, and at 360px the text track is about 200px once the button and
+   the 16px gap are paid for, which wraps a two word project name onto three
+   lines and then clamps the description into uselessness. The button drops below
+   the text instead, left aligned under it, so the name gets the full width. */
+@media (max-width:400px){
+  h1{ font-size:clamp(34px, 11vw, 52px); }
+  .row-in{ grid-template-columns:minmax(0, 1fr); row-gap:12px; }
+  .side-r{ grid-column:1; justify-self:start; align-self:start; }
+  .name{ font-size:clamp(24px, 7.6vw, 34px); }
+  .card{ padding:12px 6px 4px; }
+  .url{ font-size:11px; }
+}
+
+/* ---------- short viewports ----------
+   13vh of masthead padding is 144px on a desktop and right there. On a phone
+   held sideways the viewport is around 380px tall, so the masthead alone was
+   most of the screen before a single tile appeared. Height is the thing being
+   asked about rather than orientation, because a short window on a laptop has
+   exactly the same problem and no orientation to report. */
+@media (max-height:560px) and (min-width:480px){
+  .top{ padding:clamp(28px,8vh,72px) var(--pad) clamp(24px,5vh,48px); }
+  h1{ font-size:clamp(32px,6vw,64px); }
+  .top p{ margin-top:14px; }
+  .foot{ padding-top:clamp(32px,6vh,64px); }
+}
+/* A LANDSCAPE PHONE IS WIDE AND SHORT, and the width tiers above cannot see
+   that. 852x393 is wider than the 720 tier, so none of the phone rules reach it,
+   and narrower than 900, so it gets the one column meant for an iPad held
+   upright. On a 393px tall viewport that is a 767px tile: 511px of picture plus
+   its type, so no card is ever on screen whole and every one of them has to be
+   scrolled past in two moves.
+
+   Two equal columns at the same 3:2 is a 380px tile, 253px of picture, which
+   fits with the type and leaves the next row peeking. The description drops to
+   one line for the same reason: vertical space is the scarce axis here, not
+   horizontal, which is the opposite of every other tier on the page. */
+@media (max-height:560px) and (min-width:600px){
+  .index{ grid-template-columns:repeat(2, minmax(0, 1fr)); gap:var(--tile-gap); }
+  .row{ grid-column:auto; }
+  /* The aspect has to be restated here rather than inherited from the 900 tier.
+     A 915x412 Pixel held sideways is WIDER than 900, so none of the width rules
+     touch it and Artboard 42 was still 4/5: a 400px tile 500px tall on a 412px
+     screen. This block is the only one that knows the viewport is short, so it
+     is the only one that can be trusted to flatten the frame. */
+  .frame{ aspect-ratio:3 / 2 !important; }
+  .txt{ container-type:normal; }
+  .name{ font-size:clamp(19px, 2.6vw, 28px); }
+  .myth{ font-size:12.5px; }
+  .desc{ -webkit-line-clamp:1; min-height:0; font-size:12.5px; }
+}
+
 @media (hover:none){
   #art{ display:none; }
+}
+
+/* ---------- touch ----------
+   THE RESTING STATE HAS TO BE THE FINISHED STATE.
+
+   Everything worth seeing about a card sat behind :hover, which on a phone is
+   either never or, worse, sticky after a tap: iOS keeps the hover state on the
+   last thing touched, so one tap left a card lit while the next tap lit another
+   and neither let go. So the picture waited at opacity .84 forever, the Open
+   button stayed a grey outline, and the row read as disabled.
+
+   Resolved rather than hovered: the picture at full opacity and the button
+   already coloured in. The 1.02 scale stays off, since there is nothing to
+   transition from, and it moves onto :active so a tap still answers.
+
+   The button also has to be thumb sized. 8px of padding on a 10px label is a
+   27px target. The row itself is the link, so nothing is unreachable at 27px,
+   but a control that small does not read as pressable, which is the same
+   problem wearing a different hat. */
+@media (hover:none), (pointer:coarse){
+  .shot{ opacity:1; }
+  .cta{
+    color:#fff; border-color:var(--signal); background-color:var(--signal);
+    padding:12px 16px; min-height:44px;
+  }
+  .glyphs{ max-width:2.4em; }
+  .glyphs i{ opacity:.85; transform:none; }
+  .row:active{ box-shadow:0 6px 20px rgba(22,23,26,.14); }
+  .row:active .shot{ transform:scale(1.01); }
 }
 
 /* ---------- dev panel, type ddsd ---------- */
@@ -1168,6 +1273,14 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 
 
 /* ---------- narrow ---------- */
+@media (max-width:900px){
+  /* The rail is a baseline flex with the name at one end and the readout at the
+     other, and the readout is uppercase at .18em, so it is wide for what it
+     says. It shortens before it disappears: at 900 there is room for the field
+     name without the label in front of it. */
+  .rail span{ font-size:10px; letter-spacing:.14em; }
+  #runway{ height:1100vh; }
+}
 @media (max-width:720px){
   /* the rail readout is the first thing to give up the space */
   .rail span{ display:none; }
@@ -1186,6 +1299,29 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   #dev{ right:10px; bottom:10px; width:calc(100vw - 20px); }
   .foot{ gap:14px; font-size:11px; }
   #runway{ height:640vh; }
+}
+@media (max-width:400px){
+  /* .18em of tracking on an 11px uppercase label is 130px for "Replay the
+     intro", and there are two pills plus a link in a one column footer. The
+     tracking comes off before the type size does, since that is the cheaper of
+     the two in terms of what the footer is for. */
+  .foot{ font-size:10px; letter-spacing:.10em; padding-left:16px; padding-right:16px; }
+  .gpill{ padding:12px 18px; letter-spacing:.13em; }
+  .gpill-sm{ padding:10px 14px; letter-spacing:.11em; }
+  .foot a.gpill{ padding-bottom:12px; }
+  .foot a.gpill-sm{ padding-bottom:10px; }
+  #skip{ top:9px; right:10px; }
+  #runway{ height:560vh; }
+  .rail-in{ padding-left:16px; padding-right:16px; }
+}
+/* A LANDSCAPE PHONE IS NOT A NARROW SCREEN, so none of the width rules above
+   reach it: 844x390 is wider than the 720 tier and shorter than everything.
+   The runway is in vh, so it scales down on its own, but 1450 of a 390px
+   viewport is still 5655px of scrolling before the work appears, on the one
+   posture where somebody is most likely holding the phone one handed. */
+@media (max-height:560px){
+  #runway{ height:700vh; }
+  .boot-num{ font-size:clamp(56px,15vh,120px); }
 }
 /* the ripple and the bead are pointer effects, so they go on touch */
 @media (hover:none){
@@ -2310,6 +2446,69 @@ const touch  = matchMedia("(hover: none)").matches;
 
 
 /* ============================================================
+   3b. THE SHOTS FOLDER
+   Every picture on this page is served from shots/, sitting next to
+   index.html, and the name is the project's own slug: PROJECTS carries
+   thumb:"shots/gravity-pong" and the widths it ships at.
+
+   The primary form is the responsive set, shots/<slug>-<width>.webp,
+   with a jpg twin at each width for anything that cannot decode webp.
+   That is what the srcset above asks for and what the browser should
+   find. If a deploy carries one flat file per project instead, which
+   is what an export from a screenshot tool gives you, this walks down
+   to it rather than leaving a black rectangle on the page:
+
+     shots/slug-2900.webp   <- srcset picks a width from here
+     shots/slug-2900.jpg    <- the jpg twin at the width it picked
+     shots/slug.webp        <- flat, no width suffix
+     shots/slug.jpg
+     shots/slug.png
+
+   Each step runs on the previous one's error, so nothing is fetched
+   speculatively: a correct deploy makes exactly one request per card
+   and never enters this function's body at all.
+
+   srcset and sizes are dropped at the first fallback. Without that the
+   browser keeps reselecting a candidate out of srcset, which is a webp,
+   and the jpg step can never take: that was the one real bug in the
+   single step version this replaces.
+
+   currentSrc, not the src attribute. The browser has already chosen a
+   width out of srcset by the time an error fires, and the attribute
+   still says the largest one, so asking the attribute for a jpg twin
+   requested a 2900px jpg to replace a 760px webp on a phone.
+   ============================================================ */
+function wireShot(im, p){
+  if (!im) return;
+  const flat = [p.thumb + ".webp", p.thumb + ".jpg", p.thumb + ".png"];
+  let step = -1;
+  const tried = [];
+
+  im.addEventListener("error", () => {
+    const had = im.currentSrc || im.getAttribute("src") || "";
+    if (had) tried.push(had.slice(had.lastIndexOf("/") + 1));
+
+    /* first failure: same width, jpg instead of webp */
+    if (step < 0){
+      step = 0;
+      im.removeAttribute("srcset");
+      im.removeAttribute("sizes");
+      im.src = had.slice(-5) === ".webp"
+        ? had.slice(0, -5) + ".jpg"
+        : p.thumb + "-" + p.w[p.w.length - 1] + ".jpg";
+      return;
+    }
+    /* then the flat names, in order */
+    if (step < flat.length){ im.src = flat[step++]; return; }
+
+    im.style.display = "none";            /* the frame keeps its shape and colour */
+    console.warn("No picture found for " + p.name + " in shots/. Tried: " +
+      tried.join(", ") + ". The shots folder has to be deployed next to " +
+      "index.html, and the file names have to match thumb in PROJECTS.");
+  });
+}
+
+/* ============================================================
    4. INDEX ROWS
    ============================================================ */
 PROJECTS.forEach((p, i) => {
@@ -2343,8 +2542,8 @@ PROJECTS.forEach((p, i) => {
       <img class="shot" alt="" draggable="false"
            src="${p.thumb}-${p.w[p.w.length - 1]}.webp"
            srcset="${p.w.map(w => p.thumb + "-" + w + ".webp " + w + "w").join(", ")}"
-           sizes="${p.span === 12 ? "(max-width:720px) 92vw, 92vw"
-                                  : "(max-width:720px) 92vw, (max-width:1080px) 46vw, 46vw"}"
+           sizes="${p.span === 12 ? "(max-width:900px) 92vw, 88vw"
+                                  : "(max-width:900px) 92vw, 45vw"}"
            loading="${(touch || i < 2) ? "eager" : "lazy"}"
            fetchpriority="${i < 2 ? "high" : "auto"}"
            decoding="async">
@@ -2372,25 +2571,7 @@ PROJECTS.forEach((p, i) => {
 
   index.appendChild(a);
 
-  /* The webp to jpg fallback and the missing file warning used to sit on the one
-     shared preview image. Each card carries its own picture now, so each one
-     needs them. */
-  const im = a.querySelector(".shot");
-  if (im) im.addEventListener("error", () => {
-    const src = im.getAttribute("src") || "";
-    if (src.indexOf("shots/") === 0 && src.slice(-5) === ".webp"){
-      /* every width ships as both webp and jpg. Drop srcset first or the browser
-         keeps reselecting a webp and the fallback never takes. */
-      im.removeAttribute("srcset");
-      im.src = src.slice(0, -5) + ".jpg";
-      return;
-    }
-    im.style.display = "none";                     /* the frame keeps its shape */
-    if (src.indexOf("shots/") === 0){
-      console.warn("Preview image missing: " + src +
-        "  ->  the shots folder has to be deployed next to index.html.");
-    }
-  });
+  wireShot(a.querySelector(".shot"), p);
 });
 
 /* An IntersectionObserver used to live here, toggling a class that turned a
