@@ -65,15 +65,54 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
      its own colour override; nothing else about it, and nothing about any
      other surface, is a different recipe from this one. Do not retune these
      without being asked; they were arrived at deliberately through the dev
-     panel and are meant to stop moving. */
+     panel and are meant to stop moving.
+
+     REFRACTION AND CHROMATIC, RETUNED. Was 35 / 20, which is a max channel
+     shift (feDisplacementMap scale 55) of roughly 18px at the rim. That is
+     bigger than the ENTIRE bead, --bead: 31px above, radius 15.5px. Every
+     pass was trying to sample content that far outside a 31px circle, which
+     does not fringe, it clips: the filter hits the edge of its own region and
+     returns a flat colour instead of a gradient, which is the solid patches
+     of cyan/red/yellow that showed up over hard edges (coloured headline
+     text, a card's black edge). Same failure on the merge bridge, worse,
+     since its box is often a thin sliver a few px tall.
+     14 / 5 keeps a real, visible bend (a ~6px max shift on the reddest
+     channel) without ever asking a 31px circle to sample 18px past its own
+     edge. This is a global change: the nav bar and the pills get gentler
+     refraction too now, since one filter serves all of them and the smallest
+     consumer is what has to survive. If the bigger surfaces read as wanting
+     more punch, that is a live conversation to have through the dev panel,
+     not a reason to put the old numbers back, since the old numbers are what
+     broke the bead and the frames in the first place.
+
+     RETUNED AGAIN, TO 50 / 6, ON REQUEST: scale R 56, G 50, B 44. The note
+     above is still correct about the mechanism and wrong about the remedy. It
+     is true that asking a 31px circle to sample 18px past its own edge clips
+     rather than fringes. The conclusion it drew was to shrink the refraction
+     for EVERY surface down to what the smallest one could survive, which threw
+     away the material on the frames to protect the bead.
+
+     The real variable was never the scale, it is that the lens ramp is a
+     PERCENTAGE of the box (both feImage maps are stretched to the filter
+     region with preserveAspectRatio="none") while the displacement scale is in
+     PIXELS. Those two do not commute across sizes. At 5.5% in from the edge a
+     900px card puts the throw 49px inside itself and a 31px bead puts it 1.7px
+     inside itself, so one number cannot describe both.
+
+     So the scale is now proportional, and lives in ONE place: --lens-scale
+     below is the reference triple for a full size surface, and #cur i gets its
+     own instance of the identical ramp with the triple multiplied by the
+     bead's size over that reference. Self similar, which is what "the same
+     material at a different scale" actually means, instead of the same pixel
+     count applied to boxes that differ by 30x. See THE BEAD'S OWN LENS. */
   --glass-radius: 18px;
   --glass-edge: 18px;
   --glass-blur: 0px;
   --glass-sat: 125%;
-  --glass-bright: 1.00;
-  --glass-tint: 0.20;
-  --glass-spec: 0.90;
-  --glass-shadow: 0.12;
+  --glass-bright: 1;
+  --glass-tint: 0.2;
+  --glass-spec: 0.8;
+  --glass-shadow: 0.05;
   /* the id is flipped on every change: Chrome resolves backdrop-filter url()
      once and ignores later edits to the filter, so the reference must change */
   --glass-filter: url(#gcA);
@@ -289,10 +328,30 @@ h1 em.lit-word{ color:var(--signal); }
   min-width:0;
   padding:var(--frame-w);
   border-radius:calc(var(--glass-radius) + var(--frame-w));
-  /* a wash rather than a fill, so the ASCII ground still reads through the card
-     instead of being blocked out by eight opaque rectangles */
-  background:rgba(255,255,255,.55);
-  box-shadow:0 2px 8px rgba(22,23,26,.05);
+  /* THE FROSTED FRAME, AND WHY IT LOOKED FROSTED AT FROST 0.
+     This was background:rgba(255,255,255,.55), a flat 55% white wash, described
+     as "a wash rather than a fill, so the ASCII ground still reads through the
+     card". At 55% it does not read through, it reads as milk, and it was the
+     answer to "the frames look frosted" while --glass-blur sat at 0 the whole
+     time: frost was never the blur here, it was this.
+
+     It was also a fourth material. The tint token is 0.2, the shared gradient
+     built from it peaks at 0.15 alpha, and .row::after was ALREADY painting that
+     gradient over the top of this wash, so a card carried the token material
+     plus 0.55 of flat white underneath it while the nav bar and the pills
+     carried the token material alone. Same page, same design, four recipes.
+
+     And it is what made the cursor turn into a grey slab. The merge bridge
+     copies the target's own background onto itself, so bulging off a card's
+     inner edge it painted 0.55 white over the black preview picture, which is
+     an opaque grey blob, not glass. Measured, bead at the frame's inner edge:
+     interior +127 against the picture behind it. Nothing about a lens or a
+     shadow could have fixed that; the bridge was faithfully copying paint.
+
+     The row now carries the shared gradient itself, exactly the way .gpill
+     does, and .row::after is left holding only the two edge lights, so the
+     recipe appears once per surface instead of twice. See ONE GLASS. */
+  box-shadow:0 2px 8px rgba(22,23,26,calc(var(--glass-shadow) * 1.0));
   transition:box-shadow .45s var(--ease);
 }
 .row:hover, .row:focus-visible{ box-shadow:0 16px 44px rgba(22,23,26,.13); }
@@ -312,6 +371,64 @@ h1 em.lit-word{ color:var(--signal); }
   /* ink, not paper. Half of these screenshots are nearly black, and a light
      backing behind anything less than fully opaque reads as a dusty film. */
   background:#101114;
+}
+
+/* THE FRAME'S GLASS RING, AND WHY IT HAD TO MOVE ON TOP OF THE PICTURE.
+   THE CARD'S REFRACTION below is still right that the ring must never carry a
+   full box filter: measured, --glass-filter on .row costs 4.71x raster, and a
+   clip-path ring costs 4.57x because backdrop-filter is priced by the element's
+   box and not by the visible area left after clipping.
+
+   What that note could not know is that the cost bought nothing. A lens bends
+   what is BEHIND it, and the only thing behind a card is flat paper: with the
+   full lens on .row the ring changed by a mean of 0.14 out of 255, and 0.0% of
+   its pixels moved by more than 8. The preview panel, the one thing on a card
+   with enough contrast to be worth bending, is a CHILD of .row. It paints in
+   front. No filter on the card can ever reach it.
+
+   So the ring is built as four thin bars sitting ON the picture's edges instead,
+   inside .frame, where the picture is genuinely their backdrop. Two things make
+   this cheap and clean rather than the fourth failed attempt:
+
+   Cost is the short axis. Four bars 18px thick around a 629x480 picture is
+   about 64,000 filtered pixels against 302,000 for the whole frame, and measured
+   as a strategy this came out at 1.35x against 4.71x for the full box. That is
+   affordable always on, which is what killed the previous three rounds: they all
+   tried to GATE the full cost rather than reduce it.
+
+   Corners come free. .frame already sets overflow:hidden with a border-radius,
+   so bars laid to its edges are clipped to the rounded shape by the parent.
+   No per-corner geometry, no seam where straight bars would have met.
+
+   The bars take the page map, same as every other glass surface here. They were
+   built with a whole box lens map, on the reasoning that at 18px in the short
+   axis a bevel map anchors its ramp about 1px in and clamps. That reasoning is
+   sound and the look was rejected: a full box lens reads as water rather than
+   glass. So a bar shows a tight bright bevel hugging the picture's edge instead
+   of a smooth bend across its whole width, which is the same trade the bead and
+   the pills make. See THE SAME MATERIAL, THE SAME FILTER INSTANCE, AND THE SAME
+   MAP for the geometry table behind that decision. */
+.frame > .fr-edge{
+  position:absolute;
+  z-index:2;
+  pointer-events:none;
+  background:linear-gradient(to bottom,
+    rgba(255,255,255,calc(var(--glass-tint) * 0.55)),
+    rgba(255,255,255,calc(var(--glass-tint) * 0.10)));
+}
+.frame > .fr-t{ top:0; left:0; right:0; height:var(--glass-edge);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,var(--glass-spec)); }
+.frame > .fr-b{ bottom:0; left:0; right:0; height:var(--glass-edge);
+  box-shadow:inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45)); }
+.frame > .fr-l{ top:var(--glass-edge); bottom:var(--glass-edge); left:0; width:var(--glass-edge);
+  box-shadow:inset 1px 0 0 rgba(255,255,255,calc(var(--glass-spec) * 0.35)); }
+.frame > .fr-r{ top:var(--glass-edge); bottom:var(--glass-edge); right:0; width:var(--glass-edge);
+  box-shadow:inset -1px 0 0 rgba(255,255,255,calc(var(--glass-spec) * 0.35)); }
+@supports (backdrop-filter: url(#x)){
+  .frame > .fr-edge{
+    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  }
 }
 
 /* THE PICTURE. Nothing sits on top of it: the glass is the card's edge now, not
@@ -577,6 +694,15 @@ h1 em.lit-word{ color:var(--signal); }
 .foot a.gpill{ border:1px solid rgba(22,23,26,.13); padding-bottom:13px; }
 @supports (backdrop-filter: url(#x)){
   .gpill{
+    /* THE PILLS TAKE THE SAME MAP AS EVERYTHING ELSE.
+       These were moved to the whole box lens map because at 130x34 a bevel map
+       puts its ramp 7px in with an 18.5px throw, so the bend clamps instead of
+       fringing and reads as much weaker than the nav bar. That reading was
+       correct and the remedy was rejected: the lens map made them read as water
+       rather than glass. One map everywhere is the norm, and a small pill showing
+       a tighter, brighter bevel than a 1440px pane is the honest consequence of
+       one material meeting two very different box sizes. See THE SAME MATERIAL,
+       THE SAME FILTER INSTANCE, AND THE SAME MAP for the full geometry. */
     backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
     -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   }
@@ -647,8 +773,14 @@ h1 em.lit-word{ color:var(--signal); }
   max-height:calc(100dvh - 36px); overflow-y:auto; overscroll-behavior:contain;
   padding:14px 16px 16px;
   background:rgba(255,255,255,.92);
-  backdrop-filter:blur(14px) saturate(160%);
-  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  /* was blur(14px) saturate(160%), hardcoded, and it was the only frost left in
+     the file: a grep for blur([0-9] returned this one line. Frost is 0 for the
+     whole page, so a panel that quietly ran its own 14px was both off-material
+     and the thing that made "the frames look frosted" impossible to verify by
+     eye, since this sat on top of them while you were tuning. Reads the tokens
+     like everything else now. */
+  backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
+  -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat));
   border:1px solid rgba(22,23,26,.14); border-radius:12px;
   box-shadow:0 12px 40px rgba(22,23,26,.14);
   font-family:var(--f-body); color:var(--ink);
@@ -714,13 +846,36 @@ h1 em.lit-word{ color:var(--signal); }
 }
 @supports (backdrop-filter: url(#x)){
   #cur i{
-    /* One filter, the same one everything else on the page carries. It used to
-       have its own, scaled down for its 31px size, because the OLD default
-       displacement (94 to 106px) turned almost the whole bead into fringe. The
-       locked values above are far gentler (15 to 55px), which is most of that
-       mismatch gone on its own; if the bead still shows colour fringing at the
-       edge against a very busy backdrop, that residual is the trade for one
-       material everywhere rather than a special case for this one surface. */
+    /* THE SAME MATERIAL, THE SAME FILTER INSTANCE, AND THE SAME MAP.
+       The bead ran a lens map for one round, #gcOrb, which ramped across its
+       whole box instead of anchoring near the edges. It refracted far more of
+       the surface, measured, and it was rejected on look: a full box lens reads
+       as WATER, a rounded volume bending everything behind it, and this is meant
+       to read as GLASS, a hard surface with a worked edge and a calm middle.
+       That is a design call and it settles the geometry argument this file has
+       had with itself for four rounds, so the argument is recorded rather than
+       repeated:
+
+           surface        box        ramp peak x/y     throw
+           nav bar    1440x60      79.2px / 3.3px    18.5px
+           card ring   629x18      34.6px / 1.0px    18.5px
+           blue pill   133x45       7.3px / 2.5px    18.5px
+           bead         31x31       1.7px / 1.7px    18.5px
+
+       A bevel map anchors its ramp 5.5% in from each edge, so on the nav bar the
+       bend sits 79px inside a wide pane and reads as thick worked glass, and on
+       a 31px bead it sits 1.7px in and reads as a bright refracting rim around a
+       clear centre. That IS what a glass bead looks like. It is not the same
+       amount of refraction and it was never going to be; it is the same
+       MATERIAL, which is what was actually being asked for.
+
+       What this costs, stated plainly so nobody rediscovers it: at 18.5px of
+       throw on a 31px box the rim samples past its own edge, so the outer ring
+       clamps rather than fringing cleanly. Measured on a 31px circle, 3% of the
+       disc goes flat and the centre picks up 11.6 of disturbance. Visible under
+       magnification against a hard pattern, not at rest against paper. The knob
+       for it is Refraction in the dev panel, which drives every surface at once,
+       exactly as intended. */
     backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
     -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   }
@@ -768,29 +923,41 @@ h1 em.lit-word{ color:var(--signal); }
    reason #art is: the target's glass is in normal flow and scrolls on the
    compositor, so a viewport-positioned bridge arrives a frame behind it and the
    neck tears away from the panel on a fast scroll. */
-#mgFill, #mgRim{
-  position:absolute; left:0; top:0; z-index:290;
+#mgShadow, #mgFill, #mgRim{
+  position:absolute; left:0; top:0;
   display:none; pointer-events:none;
 }
-/* THE MISSING SHADOW.
-   The bead's own 0 4px 14px drop shadow lived on #cur i as a box-shadow, which
-   is cast from a plain circle, so it worked. #mgFill's shape is an irregular
-   blob defined by clip-path, and a box-shadow on a clipped element is cast from
-   its rectangular BOUNDING BOX, before the clip is applied, not from the
-   silhouette you actually see, so a box-shadow here would draw a rectangular
-   shadow around an organic shape. filter:drop-shadow() is cast from the real,
-   post-clip alpha, which is the one that follows the blob correctly, so that
-   is what carries the bead's shadow across the handoff instead of dropping it
-   the instant something takes over. Only ever one shared instance, only ever
-   rendering while a merge is actually happening, so the extra render pass costs
-   nothing beyond what backdrop-filter here already costs. */
-#mgFill{
-  filter:
-    drop-shadow(0 4px 10px rgba(22,23,26,.30))
-    drop-shadow(0 1px 3px rgba(22,23,26,.16));
-}
+/* THE SHADOW, ROUND TWO.
+   Round one put filter:drop-shadow() on #mgFill itself, because a box-shadow
+   on a clip-path'd element is cast from the rectangular BOUNDING BOX before
+   the clip runs, not the silhouette you see, so box-shadow was wrong here the
+   same way it would draw a rectangle around a circle.
+
+   drop-shadow() was the right primitive and the wrong element. CSS applies
+   filter first, then clip-path, to the result. #mgFill carries the clip-path
+   that IS the merged outline, so any shadow the filter grows outside that
+   outline is exactly what the clip-path then removes: the filter paints a
+   shadow, the clip-path drawn on the same element throws it away one step
+   later. That is "the shadow disappears near a frame" — it never disappears
+   only when merging, it is only generated when merging, on the one element
+   that is guaranteed to clip it back off.
+
+   The fix is to stop asking one element to both own the silhouette AND cast
+   a shadow from it. #mgShadow is a second, unclipped layer: an SVG path
+   carrying the identical contour (the same d string as the fill and the rim,
+   read off the same `dF` this frame), filtered with feDropShadow, and nothing
+   else drawn on top of it. Nothing on #mgShadow is ever clipped, so there is
+   nothing to throw the blur away. It sits one z-index behind #mgFill so the
+   glass paints over the top of its own shadow instead of the shadow riding
+   above the glass.
+
+   Opacity is read off --glass-shadow every slow tick, the same way `spec` is
+   already read off --glass-spec below, so this is driven by the one token
+   instead of a second, hardcoded number that silently drifts from it. */
+#mgShadow{ z-index:289; overflow:visible; }
+#mgFill{ z-index:290; }
 #mgRim{ z-index:291; overflow:visible; }
-@media (hover:none),(pointer:coarse){ #mgFill,#mgRim{ display:none !important; } }
+@media (hover:none),(pointer:coarse){ #mgShadow,#mgFill,#mgRim{ display:none !important; } }
 
 /* ---------- THE CUTTABLE EDGE LIGHT ----------
    Every glass surface the cursor can merge with carries its inset lights on a
@@ -825,13 +992,20 @@ h1 em.lit-word{ color:var(--signal); }
 #cur i,
 .gpill:not(.gpill-blue),
 .dev-rim,
-.row::after{
+.row{
   background:linear-gradient(to bottom,
     rgba(255,255,255,calc(var(--glass-tint) * 0.75)),
     rgba(255,255,255,calc(var(--glass-tint) * 0.15)) 42%,
     rgba(255,255,255,calc(var(--glass-tint) * 0.10)) 58%,
     rgba(255,255,255,calc(var(--glass-tint) * 0.55)));
 }
+/* .row moved up out of .row::after in the list above, and that swap is the
+   point rather than a tidy-up. The gradient was on the pseudo element while the
+   row itself carried a separate flat 55% white, so a card painted two
+   backgrounds and every other surface painted one. A pill has always been
+   gradient on the element, edge lights on ::after; a row is now the same shape,
+   which also means the merge bridge copies a real tint off it instead of paint.
+   ::after keeps the two edge lights, declared just below. */
 /* #skip used to be listed here and carry its own dedicated box-shadow too,
    which as an ID selector always outranked .gpill:not(.gpill-blue) regardless
    of source order, so it would have doubled its own edge lights the moment it
@@ -863,11 +1037,10 @@ h1 em.lit-word{ color:var(--signal); }
 
    So the ring's tint, edge light and shadow above are the identical recipe the
    nav bar uses, and stay that way, unchanged. What it does not carry, ever, is
-   a live filter of its own. The one place on a card that still shows genuine,
-   full feDisplacementMap chromatic aberration is the merge bridge, a few lines
-   below: bounded by distance to the cursor rather than by the card's own box
-   size, which is exactly why it has never once been the thing reported as
-   laggy in this entire build. */
+   a live filter of its own, not even through the merge bridge any more: see
+   THE FALLBACK LENS, WITHOUT THE LENS, a few hundred lines below, for why the
+   bridge stopped borrowing the real feDisplacementMap. Cards never get one,
+   full stop, no exception left standing. */
 
 
 
@@ -891,35 +1064,39 @@ h1 em.lit-word{ color:var(--signal); }
    Chrome for iOS included, so on any iPhone or iPad there is no lens and there
    never was.
 
-   Every glass surface already declares a non-SVG fallback of
-   blur(var(--glass-blur)), and --glass-blur is 0px because in Chromium the
-   refraction carries the whole effect. So the fallback resolved to blur(0px):
-   the glass degraded to a flat tint with a 25% saturation bump, which is the
-   nothing you were looking at.
+   This used to reach for a second material here: frost bumped from 0 to a
+   real 6px blur, tint bumped from 0.20 to 0.34, specifically for browsers that
+   can't run the filter. That was a second glass recipe living outside the ten
+   LOCKED tokens at the top of the file, triggered by a browser sniff instead
+   of a slider, which is exactly the kind of drift that keeps producing "the
+   cursor's material doesn't match the frame's material" bug reports: there
+   were two materials on the page, not one, and which one you got depended on
+   which engine rendered you.
 
-   Two tokens fix it everywhere at once. --glass-blur becomes a real frost, and
-   --glass-filter becomes EMPTY, which is legal for a custom property and makes
-   the url() vanish from all fourteen declarations that reference it. That second
-   part matters: a browser that parses backdrop-filter:url() and then ignores it
-   might drop the whole declaration rather than just that one function, and then
-   the frost would go with it.
+   --glass-blur stays at 0 here now, same as everywhere else. Frost 0 is the
+   material, full stop, no per-browser exception. The only thing this block
+   still does is null out --glass-filter, and that is not a material choice,
+   it is a correctness fix: a browser that parses backdrop-filter:url() and
+   then silently ignores it (Safari does exactly this) can drop the whole
+   backdrop-filter declaration rather than just that one function, which would
+   take blur, saturate and brightness down with it. Emptying the custom
+   property makes the url() vanish from every declaration that references it
+   before that can happen.
 
    Two guards, because neither is sufficient alone. @supports catches browsers
-   that reject the syntax, but it tests whether a value parses and not whether it
-   is honoured, and Safari parses backdrop-filter:url() and then ignores it. The
-   html.no-lens class is set by the probe in the head for that case. */
+   that reject the syntax, but it tests whether a value parses and not whether
+   it is honoured, and Safari parses backdrop-filter:url() and then ignores it.
+   The html.no-lens class is set by the probe in the head for that case.
+
+   Known tradeoff, kept on purpose rather than patched back in silently: on
+   Safari, Firefox and iOS this reads as a flatter, thinner tint than Chromium,
+   because there is no refraction there to carry the effect and frost is no
+   longer standing in for it. That is the one open question worth a second
+   look, not something this pass decided quietly. */
 @supports not (backdrop-filter: url(#x)){
-  /* THE FALLBACK NEEDS ITS OWN TINT, NOT JUST ITS OWN BLUR.
-     --glass-tint was locked at 0.20 for Chromium, where the feDisplacementMap
-     refraction does most of the visual work and the tint only needs to be a
-     whisper on top of it. Nowhere on iOS, or on desktop Safari or Firefox, is
-     there any refraction: this 6px blur plus a 0.20 tint is the ENTIRE
-     material, and at that tint it read as barely anything, which is what "the
-     nav bar has no glass properties" was on every phone testing this. Bumped
-     here, only here, so the desktop-locked value is untouched. */
-  :root{ --glass-blur: 6px; --glass-filter: ; --glass-tint: 0.34; }
+  :root{ --glass-filter: ; }
 }
-html.no-lens{ --glass-blur: 6px; --glass-filter: ; --glass-tint: 0.34; }
+html.no-lens{ --glass-filter: ; }
 
 /* ---------- loader ---------- */
 html.booting, html.booting body{ overflow:hidden; height:100%; }
@@ -1054,12 +1231,14 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     <feColorMatrix in="SourceGraphic" result="Bc" type="matrix"
       values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
 
-    <feDisplacementMap id="dR" in="Rc" in2="lens" scale="55" xChannelSelector="R" yChannelSelector="G" result="Rd"/>
-    <feDisplacementMap id="dG" in="Gc" in2="lens" scale="35" xChannelSelector="R" yChannelSelector="G" result="Gd"/>
-    <feDisplacementMap id="dB" in="Bc" in2="lens" scale="15" xChannelSelector="R" yChannelSelector="G" result="Bd"/>
+    <feDisplacementMap id="dR" in="Rc" in2="lens" scale="56" xChannelSelector="R" yChannelSelector="G" result="Rd"/>
+    <feDisplacementMap id="dG" in="Gc" in2="lens" scale="50" xChannelSelector="R" yChannelSelector="G" result="Gd"/>
+    <feDisplacementMap id="dB" in="Bc" in2="lens" scale="44" xChannelSelector="R" yChannelSelector="G" result="Bd"/>
     <feBlend in="Rd" in2="Gd" mode="screen" result="rg"/>
     <feBlend in="rg" in2="Bd" mode="screen"/>
   </filter>
+
+
 </svg>
 
 <div id="dev" aria-hidden="true">
@@ -1089,6 +1268,58 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     <iframe id="artLive" title="" tabindex="-1" scrolling="no" src="about:blank"></iframe>
   </div>
 </div>
+<!-- the merged silhouette's shadow. Unclipped on purpose: this is the whole
+     fix for "the shadow disappears near a frame." See THE SHADOW, ROUND TWO
+     in the stylesheet. The two feDropShadow primitives mirror what used to be
+     two stacked CSS drop-shadow() functions on #mgFill; flood-opacity on both
+     is set from --glass-shadow every frame, not hardcoded. -->
+<svg id="mgShadow" aria-hidden="true" focusable="false" width="0" height="0">
+  <defs>
+    <filter id="mgShadowBlur" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="mgSB1"/>
+      <feOffset in="mgSB1" dx="0" dy="4" result="mgSO1"/>
+      <feFlood id="mgShFlood1" flood-color="#16171A" flood-opacity="0.30" result="mgSC1"/>
+      <feComposite in="mgSC1" in2="mgSO1" operator="in" result="mgShadow1"/>
+
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="mgSB2"/>
+      <feOffset in="mgSB2" dx="0" dy="1" result="mgSO2"/>
+      <feFlood id="mgShFlood2" flood-color="#16171A" flood-opacity="0.16" result="mgSC2"/>
+      <feComposite in="mgSC2" in2="mgSO2" operator="in" result="mgShadow2"/>
+
+      <feMerge result="mgShAll">
+        <feMergeNode in="mgShadow1"/>
+        <feMergeNode in="mgShadow2"/>
+      </feMerge>
+
+      <!-- THE SHADOW, ROUND THREE. THIS IS THE MUD FIX.
+           Rounds one and two argued about WHICH ELEMENT should cast the shadow.
+           Both got the geometry right and the compositing wrong, and the bug
+           that survived both is this: a drop shadow was being painted across
+           the INTERIOR of the very shape casting it.
+
+           That is invisible on an opaque object, because the object covers its
+           own shadow. Every surface here is glass. #mgFill is deliberately the
+           merged silhouette MINUS the target's own rectangle (see the comment
+           in the stylesheet), so over the nav bar, over a pill, over a card,
+           there is a region where this blurred black contour is painted and
+           NOTHING opaque is painted on top of it. The bead sits at z-index 300
+           with an interior alpha of about 0.02, so it does not cover that
+           black, it shows it. That is the muddy cursor, in one primitive.
+
+           Measured, bead parked on the nav bar, interior versus the same pixels
+           with the bead moved away: -52.4 with this filter as it was, -1.5 with
+           #mgShadow display:none. One element accounted for 51 of the 52 points.
+
+           operator="out" against the unblurred SourceAlpha is the fix and it is
+           also just the definition of a drop shadow: keep the blurred flood
+           only where the caster ISN'T. Nothing changes outside the silhouette,
+           which is the whole part anyone was ever meant to see, and inside it
+           the shadow is now exactly zero rather than nearly opaque black. -->
+      <feComposite in="mgShAll" in2="SourceAlpha" operator="out"/>
+    </filter>
+  </defs>
+  <path id="mgShadowPath" d="" fill="#000" filter="url(#mgShadowBlur)"></path>
+</svg>
 <!-- the merged silhouette. Empty of material on purpose: the merge loop copies
      the target's own glass onto it every frame. -->
 <div id="mgFill" aria-hidden="true"></div>
@@ -1308,11 +1539,11 @@ const PROJECTS = [
    ============================================================ */
 const BUILD = "b590115";
 console.log("%c" + BUILD, "font:700 14px monospace;color:#2B2BEE");
-/* the lens: what the pointer is currently over, shared with the cursor loop */
-/* the rectangle that the glass and the preview are both pinned to, shared with
-   the cursor loop so the bead knows what it is merging into */
-const LENS = { on:false, l:0, t:0, w:0, h:0, glass:null,
-               tl:0, tt:0, tw:0, th:0, glassT:null };
+/* The LENS object that used to live here — the row-lens's own tracked
+   rectangle — went with the row lens itself (see THE ROW LENS THAT USED TO
+   LIVE HERE IS GONE, in the cursor module). Nothing reads it any more; it was
+   declared and never touched again. Removed rather than left as a decoy for
+   the next person who greps for "lens" wondering what still uses it. */
 const RAMP = " .:-=+*#%@";
 let COV = 1;                       /* scratch, avoids allocating per cell */
 
@@ -2173,6 +2404,24 @@ PROJECTS.forEach((p, i) => {
    reused for every row and repositioned by transform, so nothing is
    reparented and the iframe never reloads on a hover change.
    ============================================================ */
+  /* THE FRAME'S GLASS RING, INJECTED.
+     Four bars per picture, laid to the edges of .frame so the picture itself is
+     their backdrop and there is finally something with contrast for the lens to
+     bend. .frame's own overflow:hidden clips them to its border-radius, so the
+     rounded corners need no geometry here. Markup rather than CSS pseudo
+     elements because an element only has two of those and this needs four, and
+     because aria-hidden matters: these are decoration over an image and must not
+     land in the accessibility tree or take a pointer event. */
+  document.querySelectorAll(".row .frame").forEach(fr => {
+    if (fr.querySelector(".fr-edge")) return;
+    for (const side of ["t", "b", "l", "r"]){
+      const d = document.createElement("div");
+      d.className = "fr-edge fr-" + side;
+      d.setAttribute("aria-hidden", "true");
+      fr.appendChild(d);
+    }
+  });
+
 if (!touch && PREVIEW !== "off") {
   const art  = document.getElementById("art");
   const shot = document.getElementById("artShot");
@@ -2735,21 +2984,54 @@ if (!touch && PREVIEW !== "off") {
   const rows  = document.getElementById("devRows");
   if (!panel || !rows) return;
 
+  /* THE SECOND SOURCE OF TRUTH, CLOSED.
+     These defaults are not documentation, they are live: every slider calls
+     apply() once while it is being built, so on every page load this block
+     overwrites both the :root tokens AND the three feDisplacementMap scale
+     attributes, whether or not the panel is ever opened. That is why the file
+     could carry scale="56" in the markup and still render 19/14/9, and why
+     --glass-spec could read 0.90 with 0.8 written at the top: the numbers here
+     silently won, and any edit made only at the top of the file did nothing.
+     They now match the LOCKED block exactly. Change both together or neither. */
   const S = [
     { k:"radius",  label:"Roundness",   min:0,   max:36,  step:1,    def:18,   unit:"px", css:"--glass-radius" },
     { k:"edge",    label:"Inset",       min:0,   max:40,  step:1,    def:18,   unit:"px", css:"--glass-edge" },
-    { k:"refract", label:"Refraction",  min:0,   max:120, step:1,    def:35,   unit:"",   filt:1 },
-    { k:"chroma",  label:"Chromatic",   min:0,   max:48,  step:1,    def:20,   unit:"",   filt:1 },
+    { k:"refract", label:"Refraction",  min:0,   max:120, step:1,    def:50,   unit:"",   filt:1 },
+    { k:"chroma",  label:"Chromatic",   min:0,   max:48,  step:1,    def:6,    unit:"",   filt:1 },
     { k:"blur",    label:"Frost",       min:0,   max:18,  step:0.5,  def:0,    unit:"px", css:"--glass-blur" },
     { k:"sat",     label:"Saturation",  min:100, max:280, step:5,    def:125,  unit:"%",  css:"--glass-sat" },
-    { k:"bright",  label:"Brightness",  min:0.85,max:1.30,step:0.01, def:1.00, unit:"",   css:"--glass-bright" },
-    { k:"tint",    label:"Tint",        min:0,   max:1,   step:0.02, def:0.20, unit:"",   css:"--glass-tint" },
-    { k:"spec",    label:"Edge light",  min:0,   max:1,   step:0.02, def:0.90, unit:"",   css:"--glass-spec" },
-    { k:"shadow",  label:"Shadow",      min:0,   max:0.4, step:0.01, def:0.12, unit:"",   css:"--glass-shadow" }
+    { k:"bright",  label:"Brightness",  min:0.85,max:1.30,step:0.01, def:1,    unit:"",   css:"--glass-bright" },
+    { k:"tint",    label:"Tint",        min:0,   max:1,   step:0.02, def:0.2,  unit:"",   css:"--glass-tint" },
+    { k:"spec",    label:"Edge light",  min:0,   max:1,   step:0.02, def:0.8,  unit:"",   css:"--glass-spec" },
+    { k:"shadow",  label:"Shadow",      min:0,   max:0.4, step:0.01, def:0.05, unit:"",   css:"--glass-shadow" }
   ];
   const val = {};
 
   let flip = false;
+  /* THE BEAD USED TO GET ITS OWN SCALE HERE.
+     A calibrated proportional rule wrote a second displacement triple onto a
+     duplicate filter, #gcBead, so the bead could run a gentler throw than the
+     frames. The sweep behind that calibration is still worth keeping, because it
+     settles a question this file argued about for three rounds. Measured on a
+     real 31px circle over a 6px black and white ruling: the bend in the outer
+     band, the disturbance in the middle that must stay at zero, and the fraction
+     of the disc that goes flat because a pass sampled past its own edge.
+
+         G scale    edge bend    centre    flat
+            2.42          8.4       0.0    2.3%     invisible
+            8.0          31.3       0.0    3.8%     visible
+           14.0          45.3       0.0    4.2%     strong
+           16.0          92.9       0.0    3.8%     strong, still clean
+           24.0         100.4       0.0    4.2%     ceiling
+           56.0          44.2      11.6    3.0%     centre breaking up
+
+     The centre column is the finding. It holds at 0.0 the whole way to 24 and
+     only smears at 56, and even there the flat fraction is 3%. A 31px bead can
+     carry the page's own 56/50/44; the clamping three rounds of comments worried
+     about starts well past where anyone would set the slider. So there is no
+     second scale to write, no duplicate filter to keep in sync, and no
+     reference size to calibrate. See THE SAME MATERIAL, THE SAME FILTER
+     INSTANCE in the stylesheet for the other half of why the duplicate went. */
   function apply(s){
     if (s.css){ document.documentElement.style.setProperty(s.css, val[s.k] + s.unit); return; }
     if (!s.filt) return;
@@ -2763,11 +3045,24 @@ if (!touch && PREVIEW !== "off") {
     B.setAttribute("scale", Math.max(0, base - d));
     /* Chrome resolves a backdrop-filter url() once and ignores later edits to
        that filter. Renaming it and repointing the reference forces a fresh
-       resolve, which is the only thing that makes this slider live. */
+       resolve, which is the only thing that makes this slider live.
+
+       WRITING IT INLINE ALSO HAD TO STOP DEFEATING THE NO-LENS GUARDS.
+       WHEN THERE IS NO LENS empties --glass-filter from a stylesheet rule, and
+       an inline property on the same element beats any stylesheet rule, so once
+       this function had run even once, Safari kept a dangling url() in its
+       backdrop-filter. Measured with html.no-lens forced: the nav bar still
+       computed url("#gcB"). That is the exact failure that block exists to
+       prevent, reintroduced by the dev panel from the other side. If there is
+       no lens the reference is written empty rather than skipped, because
+       skipping would leave the last good url() sitting in the inline style. */
     flip = !flip;
-    const id = flip ? "gcB" : "gcA";
-    f.setAttribute("id", id);
-    document.documentElement.style.setProperty("--glass-filter", "url(#" + id + ")");
+    const gid = flip ? "gcB" : "gcA";
+    f.setAttribute("id", gid);
+    const noLens = document.documentElement.classList.contains("no-lens") ||
+      !CSS.supports("backdrop-filter", "url(#x)");
+    document.documentElement.style.setProperty(
+      "--glass-filter", noLens ? "" : "url(#" + gid + ")");
   }
 
   S.forEach(s => {
@@ -2909,6 +3204,10 @@ document.getElementById("replay")?.addEventListener("click", () => {
   const gA    = document.getElementById("mgA");
   const gB    = document.getElementById("mgB");
   const rimL  = document.getElementById("mgRimLit");
+  const shSvg = document.getElementById("mgShadow");
+  const shPath = document.getElementById("mgShadowPath");
+  const shF1   = document.getElementById("mgShFlood1");
+  const shF2   = document.getElementById("mgShFlood2");
   if (!dot || !fill || !rimS || !rimP || !clipP) return;
   const nib = dot.firstElementChild;
 
@@ -3056,7 +3355,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
 
   /* ---- CANDIDATES. Re-read on a slow tick: these are the only glass objects
          the cursor is allowed to become part of. */
-  let cand = [], tick = 0, spec = 0.9;
+  let cand = [], tick = 0, spec = 0.9, shadowTok = 0.12;
 
   function paneOpen(cp){
     if (!cp || cp === "none") return true;
@@ -3069,16 +3368,40 @@ document.getElementById("replay")?.addEventListener("click", () => {
     return true;
   }
 
-  /* THE FALLBACK LENS. A candidate with no backdrop-filter of its own used to
-     hand the bridge an empty one, so merging into it produced a tinted blob
-     with no distortion: real glass minus the one thing that makes it read as
-     glass. Cards are exactly this case on purpose, because a live filter on
-     eight full-size elements is what tanked the frame rate two rounds running.
-     So the bridge falls back to the page's own default lens, the same
-     --glass-filter every other surface already uses. The cost of that filter
-     is only ever paid by the ONE shared bridge element, while it is actually
-     near the cursor, exactly the way it already was for the pills. */
-  const fallbackBF = "var(--glass-filter) blur(var(--glass-blur)) " +
+  /* THE FALLBACK LENS, WITHOUT THE LENS.
+     This used to hand a candidate with no backdrop-filter of its own the
+     page's real --glass-filter, the full feDisplacementMap, reasoning that
+     the cost is only ever paid by the one shared bridge element. True, but
+     cost was never the problem here, shape was. The bridge's box is the
+     TIGHT bounding box of the merged silhouette, which over a card edge is
+     often a thin sliver a few px tall, thinner than the bead. Any live
+     displacement on a shape that thin samples past its own edge on almost
+     every pixel, which is the solid yellow-green patch that showed up
+     merging into a card. Turning the filter down (see the material tokens
+     above) helps the bead; it does not save a sliver a few px tall, no
+     scale is small enough for that.
+     So the bridge now falls back to blur, saturate and brightness only, the
+     same three the cards themselves already carry per THE CARD'S REFRACTION
+     below: magnitude effects with no notion of a sample point, so there is
+     nothing for a thin box to clip. Cards keep their tint, both edge lights
+     and their contact shadow through a merge exactly as before; what they
+     never get, merged or not, is a live per-pixel bend.
+
+     AND NOW IT IS UNCONDITIONAL, WHICH IS WHAT THE PARAGRAPH ABOVE ALREADY
+     ARGUED FOR. The code under it did something narrower: it reached for the
+     target's own backdrop-filter first and only fell back when there wasn't
+     one. Cards have no filter so they took the safe path, but the nav bar and
+     both pills DO have one, so they handed the bridge the page's real
+     56/50/44 displacement and walked straight into the failure this comment
+     describes. Measured, bead parked on the rail's top edge: 55% of the disc
+     inside the glass came back darker than -6, median -7.7, worst -29, and the
+     heat map put it in a band along the rail edge where the bridge box is a
+     few px tall. "No scale is small enough for that" is true for every
+     candidate, not just the ones that happen to lack a filter, so the target's
+     filter is no longer consulted at all. One line, and it is the difference
+     between a bridge that clamps to dark patches over the nav bar and one that
+     does not. */
+  const fallbackBF = "blur(var(--glass-blur)) " +
     "saturate(var(--glass-sat)) brightness(var(--glass-bright))";
   /* Pulled out of refresh() so the intro's own fast path, below, can build one
      candidate the same way without duplicating this or running the other ten
@@ -3089,9 +3412,22 @@ document.getElementById("replay")?.addEventListener("click", () => {
     if (cs.display === "none" || cs.visibility === "hidden") return null;
     if (parseFloat(cs.opacity) < 0.92) return null;
     if (isPane && !paneOpen(cs.clipPath)) return null;   /* still opening, leave it alone */
-    let bf = cs.backdropFilter;
-    if (!bf || bf === "none") bf = cs.webkitBackdropFilter;
-    if (!bf || bf === "none") bf = fallbackBF;
+    /* THE BRIDGE CARRIES WHAT THE BEAD CARRIES.
+       This read `const bf = fallbackBF` for a round, no displacement at all, so
+       the cursor stopped refracting the instant it merged with anything and
+       started again when it left. That reads as the cursor changing its own
+       appearance on approach, and making the two ends of a merge out of
+       different material is the one thing this module exists to prevent.
+
+       So the bridge takes the page map, same as the bead, the pills, the ring and
+       the nav bar. The old worry stands and is worth keeping: a bevel map anchors
+       its ramp a fixed percentage in from each edge, and the bridge box is
+       sometimes a sliver a few px tall, where those anchors land on top of each
+       other and clamp. The target's own filter is still never consulted, for the
+       reason below. If a flat patch ever shows up mid-merge over a card edge,
+       this line is where it comes from, and Refraction in the dev panel is the
+       knob, not a second filter. */
+    const bf = "var(--glass-filter) " + fallbackBF;
     const rad = parseFloat(cs.borderTopLeftRadius);
     /* THE INNER EDGE. A card is not a filled rectangle, it is a ring: its own
        outer edge, and the picture's edge nine pixels in. Every candidate that
@@ -3142,7 +3478,10 @@ document.getElementById("replay")?.addEventListener("click", () => {
   }
 
   let shown = false, lastMat = "";
-  function hide(){ if (shown){ shown = false; fill.style.display = "none"; rimS.style.display = "none"; } }
+  function hide(){
+    if (shown){ shown = false; fill.style.display = "none"; rimS.style.display = "none";
+      if (shSvg) shSvg.style.display = "none"; }
+  }
   function off(){ setBead(false); hide(); clearCut(); engaged = false; kS = 0; }
 
   (function loop(){
@@ -3175,9 +3514,16 @@ document.getElementById("replay")?.addEventListener("click", () => {
       }
     } else if (!(tick++ % 6)){
       refresh();
-      const sp = parseFloat(getComputedStyle(document.documentElement)
-                   .getPropertyValue("--glass-spec"));
+      const cs = getComputedStyle(document.documentElement);
+      const sp = parseFloat(cs.getPropertyValue("--glass-spec"));
       spec = isFinite(sp) ? sp : 0.9;
+      /* same read as spec, same cadence: the shadow ratio used to be two
+         numbers hardcoded on #mgFill's own filter, decoupled from the token
+         the bead's box-shadow actually uses. Now both floods scale off the
+         one --glass-shadow value, at the ratio that reproduces the old
+         hardcoded look (.30 and .16) at the token's own default (.12). */
+      const sh = parseFloat(cs.getPropertyValue("--glass-shadow"));
+      shadowTok = isFinite(sh) ? sh : 0.12;
     }
     if (!cand.length) return off();
 
@@ -3422,6 +3768,67 @@ document.getElementById("replay")?.addEventListener("click", () => {
     clipP.setAttribute("d", dF);
     rimP.setAttribute("d", dR);
     if (rimL) rimL.setAttribute("d", dL);
+
+    /* THE SHADOW, ROUND FOUR. Sized and positioned exactly like the rim, and
+       fed the same dF this frame, so the silhouette matches pixel for pixel.
+
+       Round three added feComposite operator="out" against SourceAlpha inside
+       the filter, which stopped the shadow painting across the silhouette's own
+       interior. That fixed most of it, measured -22.1 mean to -9.1 mean on the
+       nav bar, but not all, and the residue has a different cause worth naming.
+
+       dF is a LOCAL contour. The field is marched over a window around the bead,
+       so what it traces is the hump plus a seam segment running along the
+       target's own boundary; the target's body is not inside dF at all. The
+       filter's punch therefore protects the hump and protects nothing below the
+       seam, and the shadow is blurred by 5 and offset DOWN by 4, so it lands a
+       few px inside the target. Worst pixel sat at y=25 with the rail's top edge
+       at y=24. A contact shadow cast onto the inside of the very object it is
+       merging with, which is the last of the mud.
+
+       So the target's own rounded rect is punched out too. It cannot go in the
+       filter: the blur input has to stay the silhouette alone or the target
+       would grow a second shadow of its own, so the punch needs a shape the
+       filter does not also blur. CSS applies filter first and clip-path second,
+       to the result, which is exactly the order needed here.
+
+       This is a clip-path on the shadow layer, which round two correctly warned
+       against, and the distinction matters: round two clipped TO the silhouette,
+       so the clip removed the very blur the filter had just grown outside it.
+       This clips to everything EXCEPT the target, an enormous region, so every
+       pixel of blur outside the target survives untouched and only the pixels
+       that were never legitimate are dropped. evenodd makes the second subpath
+       a hole; the outer rect is padded well past the filter region so nothing
+       real is caught by its edge. */
+    if (shSvg && shPath){
+      shSvg.style.left = fill.style.left; shSvg.style.top = fill.style.top;
+      shSvg.setAttribute("width", W.toFixed(1));
+      shSvg.setAttribute("height", H.toFixed(1));
+      shPath.setAttribute("d", dF);
+      if (shF1) shF1.setAttribute("flood-opacity", (shadowTok * 2.5).toFixed(3));
+      if (shF2) shF2.setAttribute("flood-opacity", (shadowTok * 1.33).toFixed(3));
+      /* target rect in the shadow layer's own coordinates */
+      const tx = box.left - ox, ty = box.top - oy;
+      const tw = box.width, th = box.height;
+      const tr = Math.max(0, Math.min(T.rad || 0, Math.min(tw, th) / 2));
+      const PAD = 400;
+      const hole =
+        "M" + (tx + tr).toFixed(1) + "," + ty.toFixed(1) +
+        "H" + (tx + tw - tr).toFixed(1) +
+        "A" + tr + "," + tr + " 0 0 1 " + (tx + tw).toFixed(1) + "," + (ty + tr).toFixed(1) +
+        "V" + (ty + th - tr).toFixed(1) +
+        "A" + tr + "," + tr + " 0 0 1 " + (tx + tw - tr).toFixed(1) + "," + (ty + th).toFixed(1) +
+        "H" + (tx + tr).toFixed(1) +
+        "A" + tr + "," + tr + " 0 0 1 " + tx.toFixed(1) + "," + (ty + th - tr).toFixed(1) +
+        "V" + (ty + tr).toFixed(1) +
+        "A" + tr + "," + tr + " 0 0 1 " + (tx + tr).toFixed(1) + "," + ty.toFixed(1) + "Z";
+      const outer = "M" + (-PAD) + "," + (-PAD) +
+        "H" + (W + PAD).toFixed(1) + "V" + (H + PAD).toFixed(1) +
+        "H" + (-PAD) + "Z";
+      const shClip = "path(evenodd,'" + outer + " " + hole + "')";
+      shSvg.style.clipPath = shClip;
+      shSvg.style.webkitClipPath = shClip;
+    }
     /* The same two lights every other surface carries, but split the way the
        panes split them: a dim ring everywhere at 0.62 of the edge light, and the
        full edge light only where the contour faces up. Driven by the merged
@@ -3432,7 +3839,10 @@ document.getElementById("replay")?.addEventListener("click", () => {
     gB.setAttribute("stop-opacity", (spec * 0.34).toFixed(3));
     if (rimL) rimL.setAttribute("stroke-opacity", spec.toFixed(3));
 
-    if (!shown){ shown = true; fill.style.display = "block"; rimS.style.display = "block"; }
+    if (!shown){
+      shown = true; fill.style.display = "block"; rimS.style.display = "block";
+      if (shSvg) shSvg.style.display = "block";
+    }
   })();
 })();
 </script>
