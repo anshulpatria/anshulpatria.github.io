@@ -424,10 +424,61 @@ h1 em.lit-word{ color:var(--signal); }
   box-shadow:inset 1px 0 0 rgba(255,255,255,calc(var(--glass-spec) * 0.35)); }
 .frame > .fr-r{ top:var(--glass-edge); bottom:var(--glass-edge); right:0; width:var(--glass-edge);
   box-shadow:inset -1px 0 0 rgba(255,255,255,calc(var(--glass-spec) * 0.35)); }
+/* THE BARS DO NOT TAKE THE DISPLACEMENT LENS, AND THIS IS WHY.
+
+   The four bars were the one surface on the page that could not host it, and
+   what came out the other side was a rainbow wedge in all thirty two corners.
+   Measured, top left corner of a card: rgb(255,12,16) and rgb(8,8,254). Fully
+   saturated single channel primaries, which is not what refraction looks like.
+
+   The mechanism, in two parts that only misbehave together.
+
+   ONE. #gcA splits the backdrop into R, G and B and displaces each by a
+   different scale, 56 / 50 / 44, which is the chromatic aberration. Setting all
+   three equal makes the colour vanish completely, so the colour is the channel
+   separation and nothing else.
+
+   TWO. #gcA's filter region is x="0%" y="0%" width="100%" height="100%", so it
+   is exactly the element's box with no bleed. A displacement that reaches past
+   that boundary samples transparent black, not content. The vertical ramp puts
+   a throw of up to 18.5px on a bar that is --glass-edge tall, which is 18px, so
+   the red channel samples clean off the region while blue, at 14.5px, is still
+   inside it. Screen blending a channel that found content with two that found
+   transparency is how you get a pure primary.
+
+   That is corner only because it needs a hard contrast edge inside the throw.
+   Along the straight runs every channel lands on the same near black
+   screenshot, so the separation is invisible even where it clips. At a corner
+   .frame's rounded overflow:hidden puts light paper immediately beside black
+   picture, the channels disagree by the full range, and the ones that clip come
+   back as zero.
+
+   WHY NOT JUST GIVE THE FILTER ROOM. Because both feImage maps are stretched to
+   the filter region with preserveAspectRatio="none", so the region is also what
+   positions the bevel. Widening it to 300% does remove the fringe and it also
+   drops the bevel's luminance range from 216 to 14: the ramp lands outside the
+   element and the glass goes flat. The region cannot be opened without moving
+   the material, which is a removal dressed up as a fix.
+
+   WHY NOT SHRINK THE SCALE. Tried, at half the chroma spread, 53 / 50 / 47:
+   still 244 out of 255. The clip is a hard boundary rather than a gradient, so
+   there is no spread small enough to be safe that is also large enough to see.
+
+   So the bar keeps everything that survives at 18px, the gradient above and the
+   two inset edge lights, and gives up only the one function that provably
+   cannot work in an 18px box. The note below is still right that a bevel map
+   would clamp here; what it did not follow through on is that the whole box map
+   clamps here too, and clamping IS the artifact.
+
+   This also stays inside the existing guards on purpose. There is no url() left
+   in the declaration, so WHEN THERE IS NO LENS has nothing to null and Safari
+   and Firefox render exactly what they rendered before. No second filter, so
+   the dev panel keeps one instance to retune and cannot desync from a duplicate
+   it does not know about. */
 @supports (backdrop-filter: url(#x)){
   .frame > .fr-edge{
-    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   }
 }
 
