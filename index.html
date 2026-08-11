@@ -61,7 +61,14 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
 
   /* LOCKED. These ten values, plus the matching feDisplacementMap scales
      below, are the material for the whole page: the nav bar, every card
-     frame, the cursor, the scroll intro, Reach out. Reach out differs only in
+     frame, the cursor, the scroll intro, Reach out.
+
+     ONE EXCEPTION, BELONGING TO .row: --card-frost, declared just below this
+     block. A card frosts at 2px where every other surface frosts at 0.
+     Everything else about a card, the tint, both edge lights, the saturation,
+     the brightness, the shadow, is
+     still read from the tokens here. Nothing else on the page reads either
+     card token: the nav bar, the pills, the bead and the CTAs are untouched. Reach out differs only in
      its own colour override; nothing else about it, and nothing about any
      other surface, is a different recipe from this one. Do not retune these
      without being asked; they were arrived at deliberately through the dev
@@ -116,6 +123,31 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
   /* the id is flipped on every change: Chrome resolves backdrop-filter url()
      once and ignores later edits to the filter, so the reference must change */
   --glass-filter: url(#gcA);
+
+  /* THE CARD LENS, TRIED AND REMOVED, WITH THE NUMBERS THAT DECIDED IT.
+     A card used to run its own feDisplacementMap, a lighter build of #gcA with
+     its ramp pulled in from 5.5% to 2.2% so the bend would land inside the 9px
+     rim rather than mostly behind the picture, down to a single displacement
+     pass by the end. None of that mattered, because the cost was never the
+     primitive count, it was the region: a backdrop-filter is priced by the
+     element's whole box regardless of what is visible or how many passes run
+     over it, and even one pass over a 900px card several times a screen is
+     enough to matter.
+
+     Measured on the real page, with the Chrome FPS meter, five seconds of
+     scrolling past the two full width tiles each time. Lens off: 116 to
+     121fps, the display's own 120Hz ceiling, not one dropped frame in the
+     sample. Lens on: 19 to 53fps, with single digit stalls inside that. Frost
+     alone, the same backdrop-filter carrying only blur() and no SVG reference,
+     cost nothing measurable either way, so the split is not blur versus no
+     blur, it is the displacement chain specifically, on a box this size.
+
+     So the card carries frost, tint and both edge lights, and no bend. It is
+     the one surface on the page that reads as frosted glass with a flat
+     backdrop rather than a refracting one. */
+  --card-frost: 2px;
+}
+:root{
 
   /* 62px, which is the original 48 up by 30%. Everything that needs to know the
      bead's size now measures the element or derives from this token, so this is
@@ -353,6 +385,25 @@ h1 em.lit-word{ color:var(--signal); }
      recipe appears once per surface instead of twice. See ONE GLASS. */
   box-shadow:0 2px 8px rgba(22,23,26,calc(var(--glass-shadow) * 1.0));
   transition:box-shadow .45s var(--ease);
+  /* THE GLASS IS THE CARD'S OUTER EDGE NOW, AND NOTHING ELSE.
+     The filter lives on .row, so its backdrop is the page ground behind the
+     card and only that: the paper and the two ASCII layers. .frame and .card
+     are CHILDREN, they paint in front of a finished backdrop, so no amount of
+     lens or frost on this element can reach the picture. That is not a
+     precaution, it is the layering: a backdrop-filter cannot see its own
+     descendants. The picture is untouched by construction.
+     Frost is --card-frost, 2px, which is a card-only token. --glass-blur stays
+     at 0 for every other surface.
+
+     No @supports(backdrop-filter: url(#x)) branch here, on purpose. Every
+     other glass surface gets one, to add the SVG lens where Chromium supports
+     it. The card never did: see THE CARD LENS, TRIED AND REMOVED, up in the
+     tokens, for the measurement that settled it. So blur, saturate and
+     brightness are the whole declaration, identical on every engine, and
+     there is no url() on this element for WHEN THERE IS NO LENS to have to
+     null. */
+  backdrop-filter:blur(var(--card-frost)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
+  -webkit-backdrop-filter:blur(var(--card-frost)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
 }
 .row:hover, .row:focus-visible{ box-shadow:0 16px 44px rgba(22,23,26,.13); }
 
@@ -373,114 +424,23 @@ h1 em.lit-word{ color:var(--signal); }
   background:#101114;
 }
 
-/* THE FRAME'S GLASS RING, AND WHY IT HAD TO MOVE ON TOP OF THE PICTURE.
-   THE CARD'S REFRACTION below is still right that the ring must never carry a
-   full box filter: measured, --glass-filter on .row costs 4.71x raster, and a
-   clip-path ring costs 4.57x because backdrop-filter is priced by the element's
-   box and not by the visible area left after clipping.
+/* THE FRAME'S INNER EDGE, DELETED.
 
-   What that note could not know is that the cost bought nothing. A lens bends
-   what is BEHIND it, and the only thing behind a card is flat paper: with the
-   full lens on .row the ring changed by a mean of 0.14 out of 255, and 0.0% of
-   its pixels moved by more than 8. The preview panel, the one thing on a card
-   with enough contrast to be worth bending, is a CHILD of .row. It paints in
-   front. No filter on the card can ever reach it.
+   Four bars used to sit ON the picture's edges, inside .frame, carrying the
+   tint, the two inset lights and a backdrop-filter, on the reasoning that the
+   picture was the only thing on a card with enough contrast for a lens to bend.
+   That reasoning is what made them wrong. A bar whose backdrop IS the artwork
+   is a bevel drawn on top of the work: it saturated, lit and framed the
+   photograph's own outer 18px, so every screenshot on this page was being
+   modified by the furniture around it.
 
-   So the ring is built as four thin bars sitting ON the picture's edges instead,
-   inside .frame, where the picture is genuinely their backdrop. Two things make
-   this cheap and clean rather than the fourth failed attempt:
+   The glass is the card's OUTER edge now, on .row, where the backdrop is the
+   page ground. See the declaration up in .row and the tokens at the top. The
+   picture keeps nothing over it at all: no bars, no frost, no lens, no
+   saturate. It sits in its rounded rectangle exactly as it was shot.
 
-   Cost is the short axis. Four bars 18px thick around a 629x480 picture is
-   about 64,000 filtered pixels against 302,000 for the whole frame, and measured
-   as a strategy this came out at 1.35x against 4.71x for the full box. That is
-   affordable always on, which is what killed the previous three rounds: they all
-   tried to GATE the full cost rather than reduce it.
-
-   Corners come free. .frame already sets overflow:hidden with a border-radius,
-   so bars laid to its edges are clipped to the rounded shape by the parent.
-   No per-corner geometry, no seam where straight bars would have met.
-
-   The bars take the page map, same as every other glass surface here. They were
-   built with a whole box lens map, on the reasoning that at 18px in the short
-   axis a bevel map anchors its ramp about 1px in and clamps. That reasoning is
-   sound and the look was rejected: a full box lens reads as water rather than
-   glass. So a bar shows a tight bright bevel hugging the picture's edge instead
-   of a smooth bend across its whole width, which is the same trade the bead and
-   the pills make. See THE SAME MATERIAL, THE SAME FILTER INSTANCE, AND THE SAME
-   MAP for the geometry table behind that decision. */
-.frame > .fr-edge{
-  position:absolute;
-  z-index:2;
-  pointer-events:none;
-  background:linear-gradient(to bottom,
-    rgba(255,255,255,calc(var(--glass-tint) * 0.55)),
-    rgba(255,255,255,calc(var(--glass-tint) * 0.10)));
-}
-.frame > .fr-t{ top:0; left:0; right:0; height:var(--glass-edge);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,var(--glass-spec)); }
-.frame > .fr-b{ bottom:0; left:0; right:0; height:var(--glass-edge);
-  box-shadow:inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45)); }
-.frame > .fr-l{ top:var(--glass-edge); bottom:var(--glass-edge); left:0; width:var(--glass-edge);
-  box-shadow:inset 1px 0 0 rgba(255,255,255,calc(var(--glass-spec) * 0.35)); }
-.frame > .fr-r{ top:var(--glass-edge); bottom:var(--glass-edge); right:0; width:var(--glass-edge);
-  box-shadow:inset -1px 0 0 rgba(255,255,255,calc(var(--glass-spec) * 0.35)); }
-/* THE BARS DO NOT TAKE THE DISPLACEMENT LENS, AND THIS IS WHY.
-
-   The four bars were the one surface on the page that could not host it, and
-   what came out the other side was a rainbow wedge in all thirty two corners.
-   Measured, top left corner of a card: rgb(255,12,16) and rgb(8,8,254). Fully
-   saturated single channel primaries, which is not what refraction looks like.
-
-   The mechanism, in two parts that only misbehave together.
-
-   ONE. #gcA splits the backdrop into R, G and B and displaces each by a
-   different scale, 56 / 50 / 44, which is the chromatic aberration. Setting all
-   three equal makes the colour vanish completely, so the colour is the channel
-   separation and nothing else.
-
-   TWO. #gcA's filter region is x="0%" y="0%" width="100%" height="100%", so it
-   is exactly the element's box with no bleed. A displacement that reaches past
-   that boundary samples transparent black, not content. The vertical ramp puts
-   a throw of up to 18.5px on a bar that is --glass-edge tall, which is 18px, so
-   the red channel samples clean off the region while blue, at 14.5px, is still
-   inside it. Screen blending a channel that found content with two that found
-   transparency is how you get a pure primary.
-
-   That is corner only because it needs a hard contrast edge inside the throw.
-   Along the straight runs every channel lands on the same near black
-   screenshot, so the separation is invisible even where it clips. At a corner
-   .frame's rounded overflow:hidden puts light paper immediately beside black
-   picture, the channels disagree by the full range, and the ones that clip come
-   back as zero.
-
-   WHY NOT JUST GIVE THE FILTER ROOM. Because both feImage maps are stretched to
-   the filter region with preserveAspectRatio="none", so the region is also what
-   positions the bevel. Widening it to 300% does remove the fringe and it also
-   drops the bevel's luminance range from 216 to 14: the ramp lands outside the
-   element and the glass goes flat. The region cannot be opened without moving
-   the material, which is a removal dressed up as a fix.
-
-   WHY NOT SHRINK THE SCALE. Tried, at half the chroma spread, 53 / 50 / 47:
-   still 244 out of 255. The clip is a hard boundary rather than a gradient, so
-   there is no spread small enough to be safe that is also large enough to see.
-
-   So the bar keeps everything that survives at 18px, the gradient above and the
-   two inset edge lights, and gives up only the one function that provably
-   cannot work in an 18px box. The note below is still right that a bevel map
-   would clamp here; what it did not follow through on is that the whole box map
-   clamps here too, and clamping IS the artifact.
-
-   This also stays inside the existing guards on purpose. There is no url() left
-   in the declaration, so WHEN THERE IS NO LENS has nothing to null and Safari
-   and Firefox render exactly what they rendered before. No second filter, so
-   the dev panel keeps one instance to retune and cannot desync from a duplicate
-   it does not know about. */
-@supports (backdrop-filter: url(#x)){
-  .frame > .fr-edge{
-    backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  }
-}
+   --glass-edge (Inset, in the dev panel) is no longer read by a card. It still
+   drives .dev-rim, so the token and the slider stay. */
 
 /* THE PICTURE. Nothing sits on top of it: the glass is the card's edge now, not
    a pane over the work. Quiet at rest is opacity over the dark backing, which is
@@ -1181,22 +1141,32 @@ h1 em.lit-word{ color:var(--signal); }
     inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
 }
 /* THE CARD'S REFRACTION: THE STATIC RING NEVER GETS ONE, FULL STOP.
-   Three different gating strategies were tried here across three rounds,
-   always on, viewport proximity, and hover with a debounce scaled to each
-   card's size. All three were reported laggy, specifically and only on the two
-   full width cards. The common thread was never HOW CAREFULLY it turned on,
-   it was that once on, the filter covers the card's entire box, and cost
-   scales with that area regardless of the gate. A person deliberately holding
-   the cursor over an 870,000 to 1,180,000 pixel box to check it will always
-   clear any debounce and land on the full sustained cost, which no amount of
-   retiming the entry fixes.
+   AND THIS TIME THE MEASUREMENT ACTUALLY SETTLES IT.
+
+   Three gating strategies were tried across three rounds, always on, viewport
+   proximity, and hover with a debounce scaled to each card's size, and all
+   three were reported laggy on the two full width cards specifically. The
+   finding then was sound: cost is the element's whole box, so no gate makes
+   the sustained cost smaller, it only delays it.
+
+   A round after that gave the card a lens of its own anyway, on the reasoning
+   that shrinking the ramp and later cutting the filter to a single pass would
+   bring the cost down enough to matter. It did not, because the primitive
+   count was never the variable, the region was: a backdrop-filter is priced by
+   the element's whole box no matter how many passes run over it or how few.
+   Measured on the real page, five seconds of scrolling past the two full width
+   tiles, on the Chrome FPS meter: lens off, 116 to 121fps, the display's own
+   ceiling, not one dropped frame in the sample. Lens on, 19 to 53fps, with
+   single digit stalls inside that. Frost alone, the same backdrop-filter with
+   only blur() and no SVG reference, cost nothing measurable either way, so
+   this is not a blur problem, it is the displacement chain on a box this size.
 
    So the ring's tint, edge light and shadow above are the identical recipe the
    nav bar uses, and stay that way, unchanged. What it does not carry, ever, is
-   a live filter of its own, not even through the merge bridge any more: see
-   THE FALLBACK LENS, WITHOUT THE LENS, a few hundred lines below, for why the
-   bridge stopped borrowing the real feDisplacementMap. Cards never get one,
-   full stop, no exception left standing. */
+   a live filter of its own, not even through the merge bridge: see THE
+   FALLBACK LENS, WITHOUT THE LENS, a few hundred lines below, for why the
+   bridge stopped borrowing the real feDisplacementMap for anything. Cards
+   never get one, full stop, no exception left standing. */
 
 
 
@@ -1424,6 +1394,16 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     <feBlend in="Rd" in2="Gd" mode="screen" result="rg"/>
     <feBlend in="rg" in2="Bd" mode="screen"/>
   </filter>
+
+  <!-- The card ran a lens of its own for a round, a lighter build of #gcA
+       anchored for a 9px rim instead of a whole panel, eventually cut to one
+       displacement pass. All of it removed, not for the geometry, for the
+       cost: a backdrop-filter is priced by the element's whole box no matter
+       how many passes run over it, and even one pass over a 900px card several
+       times a screen measured at 19 to 53fps against 116 to 121fps with it
+       off. See THE CARD LENS, TRIED AND REMOVED, in the tokens at the top for
+       the numbers, and THE CARD'S REFRACTION in the stylesheet for where that
+       decision now lives. -->
 
 
 </svg>
@@ -2359,9 +2339,37 @@ const Ground = (function(){
      can see. */
   const AMBIENT = matchMedia("(hover:none)").matches ? 260 : 160;
 
+  /* THE GROUND IS EVERY GLASS SURFACE'S INPUT, SO IT CANNOT REDRAW MID SCROLL.
+     A backdrop-filter is not a texture that gets rasterized once. It is a read
+     of everything painted behind the element, filtered, and it re-runs on every
+     invalidation of that backdrop. Writing these two <pre> elements invalidates
+     the backdrop of the nav bar, both pills, the bead and every card on screen
+     at once, so a tick that costs 3ms of field evaluation can cost tens of
+     milliseconds of re-filtering downstream of it.
+
+     Scrolling already forces that re-filter on its own, because #bgInk and
+     #bgHot are position:fixed and the cards are not, so the content behind a
+     card is different content every frame and no result can be reused. Landing
+     an ambient redraw on top of that is the one moment it is guaranteed to be
+     felt. So the ground holds still while a scroll is in flight and picks up
+     120ms after it stops. `last` is deliberately not touched here, so the first
+     frame after a scroll ends redraws immediately rather than waiting out the
+     rest of the interval.
+
+     Nothing about the texture's look changes: it is an ambient field at 0.20
+     opacity, and it freezes only while the page is moving underneath it. */
+  let lastScroll = -1e9;
+  addEventListener("scroll", () => { lastScroll = performance.now(); }, { passive:true });
+  const SCROLL_HOLD = 120;
+  /* the last strings written, so an unchanged field costs no invalidation at
+     all rather than an identical write that Chrome still treats as a change */
+  let wroteA = null, wroteB = null;
+  let lastFs = -1, lastLh = "";
+
   (function tick(now){
     requestAnimationFrame(tick);
     if (now - last < AMBIENT) return;            /* ambient, not a frame rate */
+    if (now - lastScroll < SCROLL_HOLD) return;  /* see THE GROUND IS EVERY... */
     last = now;
     /* The loader and the intro are both opaque fullscreen white layers. This
        grid was being evaluated and written into two full screen <pre> elements
@@ -2406,9 +2414,17 @@ const Ground = (function(){
     const ax = vw / vh;
     CW = 1 / R;
     const fs = cw / ratio;
-    for (const L of [ink, hot]){
-      L.style.fontSize = fs + "px";
-      L.style.lineHeight = (vh / R / fs).toFixed(4);
+    /* These two were written on every tick, and a style write on a full screen
+       <pre> invalidates its layout whether or not the value changed, which then
+       invalidates the backdrop of everything reading through it. They only ever
+       change on a resize, so they are written on a resize. */
+    const lhu = (vh / R / fs).toFixed(4);          /* unitless, not the px lh above */
+    if (fs !== lastFs || lhu !== lastLh){
+      lastFs = fs; lastLh = lhu;
+      for (const L of [ink, hot]){
+        L.style.fontSize = fs + "px";
+        L.style.lineHeight = lhu;
+      }
     }
 
     const t = (now - t0)/1000;
@@ -2465,8 +2481,9 @@ const Ground = (function(){
       }
       rowsA[j] = a.join(""); rowsB[j] = b.join("");
     }
-    ink.textContent = rowsA.join("\n");
-    hot.textContent = rowsB.join("\n");
+    const outA = rowsA.join("\n"), outB = rowsB.join("\n");
+    if (outA !== wroteA){ ink.textContent = outA; wroteA = outA; }
+    if (outB !== wroteB){ hot.textContent = outB; wroteB = outB; }
   })(performance.now());
 
   return { to };
@@ -2636,23 +2653,11 @@ PROJECTS.forEach((p, i) => {
    reused for every row and repositioned by transform, so nothing is
    reparented and the iframe never reloads on a hover change.
    ============================================================ */
-  /* THE FRAME'S GLASS RING, INJECTED.
-     Four bars per picture, laid to the edges of .frame so the picture itself is
-     their backdrop and there is finally something with contrast for the lens to
-     bend. .frame's own overflow:hidden clips them to its border-radius, so the
-     rounded corners need no geometry here. Markup rather than CSS pseudo
-     elements because an element only has two of those and this needs four, and
-     because aria-hidden matters: these are decoration over an image and must not
-     land in the accessibility tree or take a pointer event. */
-  document.querySelectorAll(".row .frame").forEach(fr => {
-    if (fr.querySelector(".fr-edge")) return;
-    for (const side of ["t", "b", "l", "r"]){
-      const d = document.createElement("div");
-      d.className = "fr-edge fr-" + side;
-      d.setAttribute("aria-hidden", "true");
-      fr.appendChild(d);
-    }
-  });
+  /* Four .fr-edge bars per picture were injected here, laid to the edges of
+     .frame so the artwork was their backdrop. Gone with the CSS that styled
+     them: nothing is placed over a picture any more, so there is no markup to
+     write and .frame stays a plain rounded box holding one <img>. See THE
+     FRAME'S INNER EDGE, DELETED in the stylesheet. */
 
 if (!touch && PREVIEW !== "off") {
   const art  = document.getElementById("art");
@@ -3231,6 +3236,10 @@ if (!touch && PREVIEW !== "off") {
     { k:"refract", label:"Refraction",  min:0,   max:120, step:1,    def:50,   unit:"",   filt:1 },
     { k:"chroma",  label:"Chromatic",   min:0,   max:48,  step:1,    def:6,    unit:"",   filt:1 },
     { k:"blur",    label:"Frost",       min:0,   max:18,  step:0.5,  def:0,    unit:"px", css:"--glass-blur" },
+    /* CARDS ONLY. Frost above is the page's, and it stays at 0. This one is
+       read by .row and by nothing else, which is why it is a second slider
+       rather than a second default for the first one. */
+    { k:"cardBlur",label:"Frost, cards",min:0,   max:18,  step:0.5,  def:2,    unit:"px", css:"--card-frost" },
     { k:"sat",     label:"Saturation",  min:100, max:280, step:5,    def:125,  unit:"%",  css:"--glass-sat" },
     { k:"bright",  label:"Brightness",  min:0.85,max:1.30,step:0.01, def:1,    unit:"",   css:"--glass-bright" },
     { k:"tint",    label:"Tint",        min:0,   max:1,   step:0.02, def:0.2,  unit:"",   css:"--glass-tint" },
@@ -3275,6 +3284,11 @@ if (!touch && PREVIEW !== "off") {
     R.setAttribute("scale", base + d);
     G.setAttribute("scale", base);
     B.setAttribute("scale", Math.max(0, base - d));
+    /* Refraction and Chromatic used to also drive a card-only instance here,
+       gcCardA/gcCardXA and their four displacement ids. Removed along with the
+       filters themselves: see THE CARD LENS, TRIED AND REMOVED, in the tokens
+       at the top of the stylesheet. Cards read --card-frost only now, which is
+       its own slider below, not this one. */
     /* Chrome resolves a backdrop-filter url() once and ignores later edits to
        that filter. Renaming it and repointing the reference forces a fresh
        resolve, which is the only thing that makes this slider live.
@@ -3295,6 +3309,14 @@ if (!touch && PREVIEW !== "off") {
       !CSS.supports("backdrop-filter", "url(#x)");
     document.documentElement.style.setProperty(
       "--glass-filter", noLens ? "" : "url(#" + gid + ")");
+    /* Written empty rather than skipped when there is no lens, same as above: an
+       inline property beats the stylesheet rule that empties it, so skipping
+       would leave a dangling url() in Safari's computed backdrop-filter and
+       take the frost and the saturate down with it.
+
+       This used to also rename and republish a second, card-only filter here.
+       Gone along with the filter it drove: cards have no lens to flip any more,
+       see THE CARD LENS, TRIED AND REMOVED in the tokens at the top. */
   }
 
   S.forEach(s => {
@@ -3661,6 +3683,22 @@ document.getElementById("replay")?.addEventListener("click", () => {
        knob, not a second filter. */
     const bf = "var(--glass-filter) " + fallbackBF;
     const rad = parseFloat(cs.borderTopLeftRadius);
+    /* WHOSE GEOMETRY MOVES UNDER THE PAGE, AND WHOSE DOES NOT.
+       The loop below used to call getBoundingClientRect() on all eleven
+       candidates plus .frame on all eight rows, every frame, which is twenty
+       one forced layout reads a frame, and one in six of them landed
+       immediately after the ASCII ground rewrote twenty thousand characters of
+       <pre>, which turns a cheap read into a full document layout.
+
+       A card's box does not change while you scroll, only its position on
+       screen does, and that is arithmetic: document position minus scroll. So a
+       static candidate is measured once per refresh, in document coordinates,
+       and converted per frame for free. The rail is position:sticky and #skip
+       is position:fixed, so their DOCUMENT position is what changes while the
+       viewport stays put, and those two have to be read live. cs is already in
+       hand here, so knowing which is which costs nothing. */
+    const pos = cs.position;
+    const live = pos === "sticky" || pos === "fixed";
     /* THE INNER EDGE. A card is not a filled rectangle, it is a ring: its own
        outer edge, and the picture's edge nine pixels in. Every candidate that
        has a .frame carries a reference to it and to its own radius, read once
@@ -3675,9 +3713,28 @@ document.getElementById("replay")?.addEventListener("click", () => {
        it, and a bridge that copied only the image showed the page through
        where the target showed paint. */
     return { el, rad: isFinite(rad) ? rad : 0,
-             bg: cs.backgroundImage, bgc: cs.backgroundColor, bf,
+             bg: cs.backgroundImage, bgc: cs.backgroundColor, bf, live,
              inner, radIn: isFinite(radIn) ? radIn : 0 };
   }
+
+  /* Document space geometry for one candidate: the box, and the picture's box if
+     it has one. Called once per refresh for a static candidate and every frame
+     for a sticky or fixed one. */
+  function measureCand(c){
+    const r = c.el.getBoundingClientRect();
+    c.w = r.width; c.h = r.height;
+    c.dl = r.left + scrollX; c.dt = r.top + scrollY;
+    if (c.inner){
+      const ri = c.inner.getBoundingClientRect();
+      c.iw = ri.width; c.ih = ri.height;
+      c.idl = ri.left + scrollX; c.idt = ri.top + scrollY;
+    }
+  }
+  function measureAll(){ for (let i = 0; i < cand.length; i++) measureCand(cand[i]); }
+  /* A resize is the one thing that moves a static candidate without the refresh
+     tick knowing, and it also arrives in bursts, so this is the cheap read: the
+     next frame reconciles everything anyway. */
+  addEventListener("resize", measureAll, { passive:true });
 
   function refresh(){
     cand.length = 0;
@@ -3693,6 +3750,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
        to maintain, the row itself is both the visual frame and the merge
        target now. */
     document.querySelectorAll(".row").forEach(row => add(row));
+    measureAll();
   }
 
   /* ---- HANDOFF. The bridge draws the bead from the moment a target is in
@@ -3742,7 +3800,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
       if (!(tick++ % 6)){
         cand.length = 0;
         const c = buildCandidate(document.getElementById("skip"));
-        if (c) cand.push(c);
+        if (c){ cand.push(c); measureCand(c); }
       }
     } else if (!(tick++ % 6)){
       refresh();
@@ -3778,13 +3836,25 @@ document.getElementById("replay")?.addEventListener("click", () => {
        at the photograph, which is what lets it fall back to a plain bead
        there instead of staying permanently "touching." */
     let T = null, box = null, boxIn = null, gap = Infinity;
+    /* one read of the scroll offset for the whole loop, and the only one */
+    const sX = scrollX, sY = scrollY;
     for (let i = 0; i < cand.length; i++){
-      const c = cand[i], r = c.el.getBoundingClientRect();
-      if (r.width < 6 || r.height < 6) continue;
-      if (r.bottom < -80 || r.top > innerHeight + 80) continue;
+      const c = cand[i];
+      if (c.live) measureCand(c);        /* sticky and fixed: see WHOSE GEOMETRY */
+      if (!(c.w > 0)) continue;          /* never measured, or display:none since */
+      if (c.w < 6 || c.h < 6) continue;
+      /* THE CULL COMES FIRST NOW. It used to sit after the rect read, so an
+         off-screen card was paying full price to be thrown away, and the eight
+         rows are off-screen most of the time. Numbers only, no layout. */
+      const rt = c.dt - sY, rb = rt + c.h;
+      if (rb < -80 || rt > innerHeight + 80) continue;
+      const rl = c.dl - sX, rr = rl + c.w;
+      const r = { left:rl, top:rt, right:rr, bottom:rb, width:c.w, height:c.h };
       let g, ri = null;
       if (c.inner){
-        ri = c.inner.getBoundingClientRect();
+        const il = c.idl - sX, it = c.idt - sY;
+        ri = { left:il, top:it, right:il + c.iw, bottom:it + c.ih,
+               width:c.iw, height:c.ih };
         const ocx = (r.left + r.right) / 2, ocy = (r.top + r.bottom) / 2;
         const ohx = r.width / 2, ohy = r.height / 2;
         const orad = Math.min(c.rad, Math.min(ohx, ohy));
@@ -3876,7 +3946,18 @@ document.getElementById("replay")?.addEventListener("click", () => {
     const seam = (x, y) => (fRect(x, y) + TUCK * mouth(x, y)) < 0.9;
 
     const reach = R + Math.max(0, gap) + K + bulge + 16;
-    const cell  = Math.max(2.6, reach / 24);
+    /* THE GRID, AND WHAT IT ACTUALLY BUYS.
+       reach/24 gives a fixed 48 by 48 grid whatever the blob's size, so this
+       evaluated the field about 2,500 times a frame, every frame, through three
+       nested closures. reach/18 is 38 across, 1,444 evaluations, which is 42%
+       less work for the same silhouette: marching squares interpolates linearly
+       along each cell edge, and the error on a smooth signed distance field goes
+       with the square of the cell against the local curvature, so the place to
+       watch is the neck, where curvature is highest. At the smoothing radii this
+       page uses, K is tens of pixels, and a 3px cell is well inside that.
+       If a neck ever reads faceted on the way out of a merge, this is the one
+       number to put back, and 24 is where it was. */
+    const cell  = Math.max(2.6, reach / 18);
     const n     = Math.ceil(2 * reach / cell) + 2;
     const rings = march(G, cx - reach - cell, cy - reach - cell, cell, n, n);
 
