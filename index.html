@@ -59,14 +59,21 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
   --f-display: "Bricolage Grotesque", sans-serif;
   --f-body:    "Instrument Sans", sans-serif;
 
+  /* LOCKED. These ten values, plus the matching feDisplacementMap scales
+     below, are the material for the whole page: the nav bar, every card
+     frame, the cursor, the scroll intro, Reach out. Reach out differs only in
+     its own colour override; nothing else about it, and nothing about any
+     other surface, is a different recipe from this one. Do not retune these
+     without being asked; they were arrived at deliberately through the dev
+     panel and are meant to stop moving. */
   --glass-radius: 18px;
-  --glass-edge: 14px;
+  --glass-edge: 18px;
   --glass-blur: 0px;
   --glass-sat: 125%;
   --glass-bright: 1.00;
-  --glass-tint: 0.40;
+  --glass-tint: 0.20;
   --glass-spec: 0.90;
-  --glass-shadow: 0.10;
+  --glass-shadow: 0.12;
   /* the id is flipped on every change: Chrome resolves backdrop-filter url()
      once and ignores later edits to the filter, so the reference must change */
   --glass-filter: url(#gcA);
@@ -74,7 +81,7 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
   /* 62px, which is the original 48 up by 30%. Everything that needs to know the
      bead's size now measures the element or derives from this token, so this is
      the one number. */
-  --bead: 62px;
+  --bead: 31px;
 
   /* THE SPLIT. The row is two panes now: a frosted text pane on the left and the
      preview pane on the right. --split is the left pane's share of the glass and
@@ -97,6 +104,11 @@ if (!navigator.userAgentData) document.documentElement.className += " no-lens";
      as --pad, so the capsule draws in at the same rate the page's type does and
      can never become an island again. One number to tune. */
   --rail-inset: clamp(14px, 5vw, 148px);
+  /* the channel between tiles in the index grid */
+  --tile-gap: clamp(18px, 2.6vw, 52px);
+  /* the width of the glass boundary around a card. This is the band the bead
+     merges with, so it is the one number that sets how the merge feels. */
+  --frame-w: 9px;
   --ease: cubic-bezier(.22,.61,.36,1);
 }
 
@@ -128,16 +140,16 @@ body{
    index. Prologue layers are #layerInk / #layerHot and are untouched. */
 #bgInk,#bgHot{
   -webkit-mask-image:linear-gradient(to bottom,
-      transparent 0, rgba(0,0,0,.18) 14%, rgba(0,0,0,.55) 34%, rgba(0,0,0,.72) 62%, rgba(0,0,0,.86) 100%);
+      transparent 0, rgba(0,0,0,.34) 10%, rgba(0,0,0,.72) 28%, rgba(0,0,0,.90) 58%, #000 100%);
   mask-image:linear-gradient(to bottom,
-      transparent 0, rgba(0,0,0,.18) 14%, rgba(0,0,0,.55) 34%, rgba(0,0,0,.72) 62%, rgba(0,0,0,.86) 100%);
+      transparent 0, rgba(0,0,0,.34) 10%, rgba(0,0,0,.72) 28%, rgba(0,0,0,.90) 58%, #000 100%);
 }
-#bgInk{ color:var(--ink); opacity:.11; }
-#bgHot{ color:var(--signal); opacity:.22; }
+#bgInk{ color:var(--ink); opacity:.20; }
+#bgHot{ color:var(--signal); opacity:.34; }
 
 body::after{
   content:""; position:fixed; inset:0;
-  pointer-events:none; z-index:1; opacity:.24; mix-blend-mode:multiply;
+  pointer-events:none; z-index:1; opacity:.15;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='.4'/></svg>");
 }
 
@@ -237,112 +249,196 @@ h1 em.lit-word{ color:var(--signal); }
 }
 
 /* ---------- index ---------- */
-.legend{
-  display:none; padding:0 var(--pad) 12px;
-  font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--ink-soft);
+/* THE COMPOSITION.
+   Eight tiles on a twelve column grid, each with its own span and its own
+   aspect. The spans and aspects are DATA, not CSS: every card carries --span
+   and --ar as inline custom properties written from the PROJECTS array, so the
+   composition is retuned in one place in the script and never here.
+
+   Why not a uniform grid. These are tools, and they are not all the same shape:
+   the calligraphy is 0.78, the line grid is square, the rest run 1.55 to 1.78.
+   Each frame is chosen to match its picture, so nothing is cropped to a sliver,
+   and the varying heights are what makes the page read as composed rather than
+   generated. */
+.legend{ display:none !important; }   /* three columns described a row, not a grid */
+
+.index{
+  display:grid;
+  grid-template-columns:repeat(12, minmax(0, 1fr));
+  gap:var(--tile-gap);
+  align-items:start;
+  padding:0 var(--pad) clamp(40px, 6vh, 90px);
 }
-.legend div{ display:grid; grid-template-columns:104px 1fr 200px; gap:28px; }
-.legend div span:last-child{ text-align:right; }
 
-.index{ border-top:1px solid var(--rule); }
+/* THE CARD, AS ONE OBJECT.
+   Frame, then preview, then type, inside a single rectangle with a glass edge.
 
-/* no isolation: it forms a backdrop root, and the slab could then never
-   see the preview sitting behind the row */
-.row{ display:block; position:relative; border-bottom:1px solid var(--rule); }
+   It used to be two separate things: a picture, and a glass panel under it
+   holding the text. That is what made the cursor behave differently arriving
+   from above than from below, because above the panel was a black image and
+   below it was paper, and it is what made the bead seem to disappear: it was
+   crossing surfaces that had nothing in common. There is one rectangle now, so
+   there is one approach, from any side, and it is always the same.
 
-/* THE ROW, verbatim from the last build that had it. Every one of these
-   selectors had been deleted, surviving only inside media queries, so above
-   900px the rows had no grid, no gutters, no type sizes and no stacking level.
-   Restored from source rather than rewritten, because a rewrite got the name
-   axis, the myth colour and the sliding url wrong. */
-/* the separator would cut straight through a floating slab */
-.row{ transition:border-color .34s var(--ease); }
-.row:hover{ border-bottom-color:transparent; }
+   No isolation: it would form a backdrop root and the glass edge could then
+   never see the paper behind the card. */
+.row{
+  position:relative;
+  grid-column:span var(--span, 6);
+  display:block;
+  min-width:0;
+  padding:var(--frame-w);
+  border-radius:calc(var(--glass-radius) + var(--frame-w));
+  /* a wash rather than a fill, so the ASCII ground still reads through the card
+     instead of being blocked out by eight opaque rectangles */
+  background:rgba(255,255,255,.55);
+  box-shadow:0 2px 8px rgba(22,23,26,.05);
+  transition:box-shadow .45s var(--ease);
+}
+.row:hover, .row:focus-visible{ box-shadow:0 16px 44px rgba(22,23,26,.13); }
 
+.frame{
+  position:relative; z-index:1;
+  /* z-index:1, not auto. ::after always paints after every real child in
+     document order, no matter where the markup puts it, so .row::after would
+     otherwise land on top of the picture rather than only in the ring outside
+     it. This is the one line standing between "the frame is glass, the picture
+     is clean" and the opposite. */
+  display:block;
+  width:100%;
+  aspect-ratio:var(--ar, 3 / 2);
+  border-radius:var(--glass-radius);
+  overflow:hidden;
+  /* ink, not paper. Half of these screenshots are nearly black, and a light
+     backing behind anything less than fully opaque reads as a dusty film. */
+  background:#101114;
+}
+
+/* THE PICTURE. Nothing sits on top of it: the glass is the card's edge now, not
+   a pane over the work. Quiet at rest is opacity over the dark backing, which is
+   a compositor property and costs nothing, rather than a filter, which forces
+   the layer to re-render on every repaint eight times over. */
+.shot{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  display:block;
+  object-fit:cover;
+  object-position:var(--pos, center);
+  opacity:.84;
+  transition:opacity .45s var(--ease), transform .8s var(--ease);
+}
+.row:hover .shot, .row:focus-visible .shot{
+  opacity:1;
+  transform:scale(1.02);
+}
+
+.card{ padding:14px 8px 5px; }
 .row-in{
   position:relative; z-index:2;
   display:grid;
-  /* the grid IS the two panes. Its content box is the glass's own box, so a
-     percentage here is a percentage of the glass, and column one lands exactly
-     on the text pane while 1fr lands exactly on the preview pane. */
-  grid-template-columns:calc(100% * var(--split) - var(--vgap) / 2) 1fr;
-  column-gap:var(--vgap);
-  align-items:center;
-  padding:5px var(--glass-edge);
-  transition:transform .34s var(--ease);
+  grid-template-columns:minmax(0, 1fr) auto;
+  align-items:end;
+  column-gap:16px;
 }
-/* The gutter the type keeps from the glass, unchanged: it used to come from
-   .row-in's own padding, and it now comes from the pane's, so the text sits at
-   the same distance from the glass edge as it always did, on both sides. */
-.side-t, .side-r{
-  min-width:0;
-  padding:calc(clamp(18px,2.6vw,30px) - 5px) calc(var(--pad) - var(--glass-edge));
-}
-.side-t{
-  display:grid; grid-template-columns:104px minmax(0,1fr);
-  column-gap:28px; align-items:center;
-}
-.side-r{ display:flex; align-items:center; justify-content:flex-end; }
-/* minmax(0,1fr) above stops a long word forcing the column wider than the pane;
-   this is what actually lets the line break instead of running into the glass */
 .txt{ min-width:0; container-type:inline-size; }
-/* no padding shift and no lift: hover should not move the layout */
-.row:hover .row-in{ }
+.side-r{ grid-column:2; align-self:end; }
 
 .ep{
-  font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  font-size:10px; letter-spacing:.18em; text-transform:uppercase;
   color:var(--ink-soft);
   transition:color .35s var(--ease);
 }
 .row:hover .ep{ color:var(--signal); }
 
-/* the myth line reads at rest, the factual one opens on hover */
-.myth{
-  margin:8px 0 0; font-size:14px; line-height:1.4; color:var(--ink-soft);
-  max-width:46ch;
-}
-.row:hover .myth{ color:var(--ink); }
-
 .name{
   font-family:var(--f-display);
   font-variation-settings:"wdth" 86,"opsz" 60;
   font-weight:500;
-  /* Sized against the text pane, not the viewport. At a third of the width a
-     62px display face cannot hold "Orchestrator" on one line, and 4.6vw knows
-     nothing about the pane, so it would run straight into the preview. cqi is a
-     percentage of the pane, so the name stays as large as the pane allows at
-     every viewport and the 62px ceiling is still the original one. */
-  font-size:clamp(26px, 15.5cqi, 62px);
-  line-height:.98;
-  letter-spacing:-.028em;
-  margin:0;
-  overflow-wrap:break-word;      /* a net, for a word longer than the pane */
+  font-size:clamp(21px, 8.4cqi, 44px);
+  line-height:1;
+  letter-spacing:-.026em;
+  margin:5px 0 0;
+  overflow-wrap:break-word;
 }
 
+/* CLAMPED, so every card's type block is exactly the same height and a pair of
+   tiles cannot end at different depths because one description wrapped further. */
+.myth{
+  margin:7px 0 0; font-size:13.5px; line-height:1.4; color:var(--ink-soft);
+  display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.row:hover .myth{ color:var(--ink); }
 .desc{
-  margin:10px 0 0; font-size:14px; line-height:1.45; color:var(--ink-soft);
-  max-width:54ch; opacity:0; max-height:0; overflow:hidden;
-  transition:opacity .4s var(--ease), max-height .5s var(--ease);
+  margin:6px 0 0; font-size:13px; line-height:1.45; color:var(--ink-soft);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  overflow:hidden;
+  min-height:calc(2 * 1.45 * 13px);
 }
-/* 80px was four lines at the old full width. The same sentence takes more lines
-   in a third of the width, and max-height has to be a real number to animate. */
-.row:hover .desc,.row:focus-visible .desc{ opacity:1; max-height:220px; }
 
-.meta{
-  display:flex; align-items:center; justify-content:flex-end; gap:16px;
-  font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft);
-  white-space:nowrap;
+/* THE THING TO CLICK. */
+.cta{
+  display:inline-flex; align-items:center; gap:9px; white-space:nowrap;
+  padding:8px 13px; border-radius:999px;
+  border:1px solid var(--rule);
+  font-size:10px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-soft);
+  transition:color .3s var(--ease), border-color .3s var(--ease),
+             background-color .3s var(--ease);
 }
-.meta u{
-  text-decoration:none; display:inline-block; max-width:0; overflow:hidden;
-  color:var(--signal); letter-spacing:.03em; text-transform:none; font-size:12px;
-  transition:max-width .55s var(--ease);
+.row:hover .cta, .row:focus-visible .cta{
+  color:#fff; border-color:var(--signal); background-color:var(--signal);
 }
-.row:hover .meta u{ max-width:240px; }
 
-.arrow{ flex:none; width:22px; height:22px; transition:transform .45s var(--ease); }
-.arrow line,.arrow polyline{ stroke:currentColor; stroke-width:1.4; fill:none; }
-.row:hover .arrow{ transform:translate(4px,-4px); color:var(--signal); }
+/* THE LIVE LINK, showing rather than sliding out.
+   These are things that run in a browser, so the address is the proof. It used
+   to animate from 0 to 240px of width on hover, which is a layout animation and
+   in a grid it would push the arrow around. */
+/* .meta held the type label and the arrow. Both moved into .ep and .cta. */
+.url{
+  display:block; margin:9px 0 0;
+  font-size:11.5px; letter-spacing:.02em; text-transform:none;
+  color:var(--ink-soft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  transition:color .3s var(--ease);
+}
+.row:hover .url{ color:var(--signal); }
+
+/* THE OPENING ANIMATION.
+   Three glyphs pulled from the same ramp the ASCII ground draws with
+   (" .:-=+*#%@"), reserved at a fixed width so they cost no layout when they
+   appear: opacity and a small scale, nothing that reflows. At rest they take
+   no visual space (max-width:0, overflow hidden), so the button is exactly
+   "Open" plus the arrow, unchanged. On hover they widen open and flicker in
+   one after another, dot then plus then star, like the row's own field
+   resolving out of noise before the arrow, which is the site's own visual
+   language rather than a borrowed one. */
+.glyphs{
+  display:inline-flex; gap:2px; max-width:0; overflow:hidden;
+  font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:10px; line-height:1;
+  transition:max-width .3s var(--ease);
+}
+.row:hover .glyphs, .row:focus-visible .glyphs{ max-width:2.4em; }
+.glyphs i{
+  font-style:normal; display:inline-block;
+  opacity:0; transform:translateY(2px) scale(.6);
+  transition:opacity .22s var(--ease), transform .22s var(--ease);
+}
+.row:hover .glyphs i, .row:focus-visible .glyphs i{
+  opacity:.85; transform:translateY(0) scale(1);
+}
+.row:hover .glyphs i:nth-child(1), .row:focus-visible .glyphs i:nth-child(1){ transition-delay:0ms; }
+.row:hover .glyphs i:nth-child(2), .row:focus-visible .glyphs i:nth-child(2){ transition-delay:70ms; }
+.row:hover .glyphs i:nth-child(3), .row:focus-visible .glyphs i:nth-child(3){ transition-delay:140ms; }
+
+.arrow{ flex:none; width:18px; height:18px; }
+.arrow line,.arrow polyline{ stroke:currentColor; stroke-width:1.5; fill:none; }
+/* No colour here, and no transform either any more: the arrow used to
+   translate(4px,-4px) on hover, a diagonal nudge which is exactly why it read
+   as off centre the moment you hovered it, since it was, by design, no longer
+   sitting where it started. The glyphs above are the button's motion now; the
+   arrow just stays where it is centred. */
 
 /* ---------- in row preview, seen through a lens ---------- */
 /* The preview is no longer a band across the row. The page is laid over the
@@ -520,28 +616,29 @@ h1 em.lit-word{ color:var(--signal); }
   transition-delay:var(--d,0ms);
 }
 
-/* ---------- responsive ---------- */
-@media (max-width:900px){
-  /* under 900 there is not enough width for two panes to hold anything, so the
-     split folds back into the single full width row it was */
-  .row-in{ grid-template-columns:1fr; gap:10px;
-           padding:clamp(18px,2.6vw,30px) var(--pad); }
-  .side-t, .side-r{ padding:0; }
-  .side-t{ grid-template-columns:1fr; row-gap:8px; }
-  .side-r{ justify-content:flex-start; }
+/* ---------- responsive ----------
+   The composition collapses in two steps. At 1080 the twelve column grid halves,
+   so a 7 and a 5 become two full width tiles rather than two thin ones, and the
+   spans are overridden rather than the tiles rewritten. Below 720 it is one
+   column and every tile takes the same 3:2 frame, because a portrait tile and a
+   square tile stacked on a phone read as an accident. */
+@media (max-width:1080px){
+  .index{ grid-template-columns:repeat(6, minmax(0, 1fr)); }
+  .row{ grid-column:span 6; }
+  .name{ font-size:clamp(24px, 6cqi, 44px); }
+}
+@media (max-width:720px){
+  .index{ grid-template-columns:1fr; gap:calc(var(--tile-gap) * 1.4); }
+  .row{ grid-column:1 / -1; }
+  .frame{ aspect-ratio:3 / 2 !important; }
   .txt{ container-type:normal; }
-  .name{ font-size:clamp(30px,4.6vw,62px); }
-  .meta{ justify-content:flex-start; }
-  .meta u{ max-width:none; overflow:visible; }
-  .desc{ opacity:1; max-height:none; }
+  .name{ font-size:clamp(26px, 7vw, 40px); }
+  .myth, .desc{ font-size:13px; }
   h1{ max-width:none; }
 }
 @media (hover:none){
   #art{ display:none; }
-  .desc{ opacity:1; max-height:none; }
 }
-@media (min-width:901px){ .legend{ display:block; } }
-
 
 /* ---------- dev panel, type ddsd ---------- */
 #dev{
@@ -612,20 +709,18 @@ h1 em.lit-word{ color:var(--signal); }
 #cur i{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
   display:block; width:var(--bead); height:var(--bead); border-radius:50%;
-  background:radial-gradient(125% 125% at 32% 26%,
-    rgba(255,255,255,.52) 0%,
-    rgba(255,255,255,.10) 38%,
-    rgba(255,255,255,0) 60%);
   backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,calc(var(--glass-spec) * 0.62)),
-    inset 0 2px 4px rgba(255,255,255,var(--glass-spec)),
-    inset 0 -4px 7px rgba(22,23,26,.10),
-    0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 2.2));
 }
 @supports (backdrop-filter: url(#x)){
   #cur i{
+    /* One filter, the same one everything else on the page carries. It used to
+       have its own, scaled down for its 31px size, because the OLD default
+       displacement (94 to 106px) turned almost the whole bead into fringe. The
+       locked values above are far gentler (15 to 55px), which is most of that
+       mismatch gone on its own; if the bead still shows colour fringing at the
+       edge against a very busy backdrop, that residual is the trade for one
+       material everywhere rather than a special case for this one surface. */
     backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
     -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
   }
@@ -653,7 +748,8 @@ h1 em.lit-word{ color:var(--signal); }
    position and opening are now all lerped in one loop off one clock. */
 #cur i{ transition:width .3s var(--ease), height .3s var(--ease),
                     background .3s var(--ease), opacity .16s linear; }
-#cur.merged i{ opacity:0; }
+/* #cur.merged used to hide the bead once the old row lens had grown past
+   halfway. Nothing sets that class any more; see the cursor module. */
 @media (prefers-reduced-motion:reduce){ #cur.tap i{ animation:none; } }
 
 /* ---------- the merge surface ----------
@@ -676,132 +772,61 @@ h1 em.lit-word{ color:var(--signal); }
   position:absolute; left:0; top:0; z-index:290;
   display:none; pointer-events:none;
 }
+/* THE MISSING SHADOW.
+   The bead's own 0 4px 14px drop shadow lived on #cur i as a box-shadow, which
+   is cast from a plain circle, so it worked. #mgFill's shape is an irregular
+   blob defined by clip-path, and a box-shadow on a clipped element is cast from
+   its rectangular BOUNDING BOX, before the clip is applied, not from the
+   silhouette you actually see, so a box-shadow here would draw a rectangular
+   shadow around an organic shape. filter:drop-shadow() is cast from the real,
+   post-clip alpha, which is the one that follows the blob correctly, so that
+   is what carries the bead's shadow across the handoff instead of dropping it
+   the instant something takes over. Only ever one shared instance, only ever
+   rendering while a merge is actually happening, so the extra render pass costs
+   nothing beyond what backdrop-filter here already costs. */
+#mgFill{
+  filter:
+    drop-shadow(0 4px 10px rgba(22,23,26,.30))
+    drop-shadow(0 1px 3px rgba(22,23,26,.16));
+}
 #mgRim{ z-index:291; overflow:visible; }
 @media (hover:none),(pointer:coarse){ #mgFill,#mgRim{ display:none !important; } }
 
-/* ---------- row glass ---------- */
-/* The bead's material, and only the hovered row carries a filter. */
-/* THE PREVIEW PANE, the right two thirds. Same glass, same morph, same preview
-   as before; only its left edge moved. */
-.glass{
-  position:absolute; z-index:1;
-  top:5px; bottom:5px; right:var(--glass-edge);
-  left:calc(var(--glass-edge) + (100% - 2 * var(--glass-edge)) * var(--split) + var(--vgap) / 2);
-  display:block; pointer-events:none;
-  border-radius:var(--glass-radius);
-  /* the shape the bead becomes. Written every frame by the cursor loop with the
-     identical string it writes to the preview's clip. */
-  clip-path:inset(0 round var(--glass-radius));
-  opacity:0; transition:opacity .3s var(--ease);
-  /* Tint, both edge lights and the drop shadow are declared once, in ONE GLASS
-     below. They used to be declared here as well, and every one of them was
-     dead: same specificity, later rule wins. */
-}
-.row:hover .glass, .row:focus-visible .glass{ opacity:1; }
-@supports (backdrop-filter: url(#x)){
-  .row:hover .glass, .row:focus-visible .glass{
-    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  }
-}
-
 /* ---------- THE CUTTABLE EDGE LIGHT ----------
-   Every glass surface the cursor is allowed to merge with now carries its inset
-   lights on a pseudo element instead of on itself. A box-shadow cannot be
-   removed in one region, but a layer can be masked, so the merge writes one
-   custom property, --rim-cut, and the target's own edge light opens a mouth
-   exactly where the neck arrives. Unset, the mask is `none` and the light is
-   whole, which is the resting state and costs nothing.
+   Every glass surface the cursor can merge with carries its inset lights on a
+   pseudo element instead of on itself. A box-shadow cannot be removed in one
+   region, but a layer can be masked, so the merge writes one custom property,
+   --rim-cut, and the target's own edge light opens a mouth exactly where the
+   neck arrives. Unset, the mask is `none` and the light is whole.
 
-   The outer drop shadows stay on the elements themselves. Masking those would
-   cut the shadow the object casts on the paper, which has nothing to do with
-   the merge. */
-.glass::after, .glass-t::after, .gpill::after, .rail-in::after{
-  content:""; position:absolute; border-radius:inherit;
+   This shared rule is only the plumbing: content, position, radius, and the
+   mask itself. Each surface's own box-shadow is declared where it always was,
+   below, in ONE GLASS. */
+.row::after, .gpill::after, .rail-in::after{
+  content:""; position:absolute; inset:0; border-radius:inherit;
   pointer-events:none;
   -webkit-mask-image:var(--rim-cut, none);
           mask-image:var(--rim-cut, none);
   -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
 }
-.glass::after, .glass-t::after{ inset:0; }
-
-/* THE TEXT PANE, the left third. The same material as the nav bar and the same
-   opening morph as the preview pane, driven from the same pointer in the same
-   frame. The one difference is the frost: the type is read THROUGH this pane, so
-   it is pushed further out of focus than the pane that has to stay legible as a
-   preview. */
-.glass-t{
-  position:absolute; z-index:1;
-  top:5px; bottom:5px; left:var(--glass-edge);
-  right:calc(var(--glass-edge) + (100% - 2 * var(--glass-edge)) * (1 - var(--split)) + var(--vgap) / 2);
-  display:block; pointer-events:none;
-  border-radius:var(--glass-radius);
-  clip-path:inset(0 round var(--glass-radius));
-  opacity:0; transition:opacity .3s var(--ease);
-  backdrop-filter:blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  -webkit-backdrop-filter:blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-}
-.row:hover .glass-t, .row:focus-visible .glass-t{ opacity:1; }
-@supports (backdrop-filter: url(#x)){
-  .row:hover .glass-t, .row:focus-visible .glass-t{
-    backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-    -webkit-backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  }
-}
-/* Folding the split away has to be declared HERE, after the two panes, not up in
-   the layout media block: same specificity, and the later rule wins. */
-@media (max-width:900px){
-  .glass-t{ display:none; }
-  .glass{ left:var(--glass-edge); }
-}
-
-/* ---------- TOUCH ----------
-   The panes were revealed by :hover and :focus-visible and nothing else, so on a
-   phone they sat at opacity 0 for the whole session and the index was type on
-   paper. There is no pointer to reveal them with, so they are simply open.
-
-   The filter has to be restated here because the rules above only put it on the
-   hover and focus states. One declaration serves both engines: --glass-filter is
-   the lens in Chromium and empty everywhere else, so this resolves to the
-   refraction on Android and to a 6px frost on iOS.
-
-   The border going transparent is the author's own note applied to touch: a
-   separator cuts straight through a floating slab, and on touch every row is a
-   slab all the time. Delete those two lines to keep the hairlines. */
-@media (hover:none){
-  .glass, .glass-t{ opacity:1; }
-  .glass{
-    backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-    -webkit-backdrop-filter:var(--glass-filter) blur(var(--glass-blur)) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  }
-  .glass-t{
-    backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-    -webkit-backdrop-filter:var(--glass-filter) blur(calc(var(--glass-blur) + var(--frost-t))) saturate(var(--glass-sat)) brightness(var(--glass-bright));
-  }
-  .row{ border-bottom-color:transparent; }
-  .row:hover{ border-bottom-color:transparent; }
-}
 
 /* ---------- ONE GLASS ----------
-   The navigation bar is the material. Everything else on the page now wears it.
-
-   Five of the seven glass surfaces already did: .rail-in, #skip, .gpill and
-   .dev-rim all shared the rail's vertical tint. The two that did not were the
-   bead and the row rectangle, which carried a radial hotspot at 32% 26% with a
-   1px ring instead, and that is the whole reason they never looked like the
-   rail: different gradient, different edge lights, different shadow.
+   The navigation bar is the material. Everything else on the page now wears it,
+   including the card frame: same tint, same two edge lights, same refraction,
+   same chromatic aberration, same brightness. Reach out is still the one
+   surface that differs, and only in colour — its own background overrides this
+   one, nothing else about it does.
 
    The tint, both edge lights and the refraction are identical everywhere now.
    The only thing that still varies is how far the drop shadow reaches, because
    that is a function of how big the object is and how far off the paper it sits:
    a 48px bead with the rail capsule's 30px shadow reads as a hovering marble.
    Everything here is a token, so this block is the one place to tune it. */
-.glass,
-.glass-t,
 #cur i,
 #skip,
 .gpill:not(.gpill-blue),
-.dev-rim{
+.dev-rim,
+.row::after{
   background:linear-gradient(to bottom,
     rgba(255,255,255,calc(var(--glass-tint) * 0.75)),
     rgba(255,255,255,calc(var(--glass-tint) * 0.15)) 42%,
@@ -820,28 +845,43 @@ h1 em.lit-word{ color:var(--signal); }
     0 1px 1px rgba(22,23,26,.17),
     0 2px 7px rgba(22,23,26,.07);
 }
-.gpill:not(.gpill-blue)::after{
+.gpill:not(.gpill-blue)::after,
+.row::after{
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
     inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
 }
-/* the row rectangle is the same size and the same distance off the paper as the
-   rail capsule, so it takes the rail's shadow verbatim. The OUTER shadow stays
-   on the element; the two edge lights sit on ::after so the merge can cut a
-   mouth in them. This is still the one place they are declared. */
-.glass, .glass-t{
-  box-shadow:0 10px 30px rgba(22,23,26,calc(var(--glass-shadow) * 1.9));
-}
-.glass::after, .glass-t::after{
-  box-shadow:
-    inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
-    inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45));
-}
+/* THE CARD'S REFRACTION: THE STATIC RING NEVER GETS ONE, FULL STOP.
+   Three different gating strategies were tried here across three rounds,
+   always on, viewport proximity, and hover with a debounce scaled to each
+   card's size. All three were reported laggy, specifically and only on the two
+   full width cards. The common thread was never HOW CAREFULLY it turned on,
+   it was that once on, the filter covers the card's entire box, and cost
+   scales with that area regardless of the gate. A person deliberately holding
+   the cursor over an 870,000 to 1,180,000 pixel box to check it will always
+   clear any debounce and land on the full sustained cost, which no amount of
+   retiming the entry fixes.
+
+   So the ring's tint, edge light and shadow above are the identical recipe the
+   nav bar uses, and stay that way, unchanged. What it does not carry, ever, is
+   a live filter of its own. The one place on a card that still shows genuine,
+   full feDisplacementMap chromatic aberration is the merge bridge, a few lines
+   below: bounded by distance to the cursor rather than by the card's own box
+   size, which is exactly why it has never once been the thing reported as
+   laggy in this entire build. */
+
+
+
 /* the bead is small and sits close, so only its reach is scaled down */
 #cur i{
   box-shadow:
+    /* the two edge lights every other surface carries */
     inset 0 1px 0 rgba(255,255,255,var(--glass-spec)),
     inset 0 -1px 0 rgba(255,255,255,calc(var(--glass-spec) * 0.45)),
+    /* a ring in both directions, so the bead is legible against anything: the
+       white ring carries it on dark, the dark ring carries it on paper */
+    inset 0 0 0 1px rgba(255,255,255,.40),
+    0 0 0 1px rgba(22,23,26,.20),
     0 4px 14px rgba(22,23,26,calc(var(--glass-shadow) * 2.2));
 }
 
@@ -975,13 +1015,7 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   /* the rail readout is the first thing to give up the space */
   .rail span{ display:none; }
   .rail b{ font-size:13px; letter-spacing:.12em; }
-  .meta u{
-    display:block; max-width:100%; overflow:hidden;
-    text-overflow:ellipsis; white-space:nowrap;
-  }
-  .meta{ flex-wrap:wrap; gap:8px 14px; }
-  
-.myth{ font-size:13px; }
+  .myth{ font-size:13px; }
   .desc{ font-size:13px; }
   /* a full intro on a thumb is too long a scroll */
   #runway{ height:820vh; }
@@ -1040,9 +1074,9 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     <feColorMatrix in="SourceGraphic" result="Bc" type="matrix"
       values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
 
-    <feDisplacementMap id="dR" in="Rc" in2="lens" scale="106" xChannelSelector="R" yChannelSelector="G" result="Rd"/>
-    <feDisplacementMap id="dG" in="Gc" in2="lens" scale="100" xChannelSelector="R" yChannelSelector="G" result="Gd"/>
-    <feDisplacementMap id="dB" in="Bc" in2="lens" scale="94" xChannelSelector="R" yChannelSelector="G" result="Bd"/>
+    <feDisplacementMap id="dR" in="Rc" in2="lens" scale="55" xChannelSelector="R" yChannelSelector="G" result="Rd"/>
+    <feDisplacementMap id="dG" in="Gc" in2="lens" scale="35" xChannelSelector="R" yChannelSelector="G" result="Gd"/>
+    <feDisplacementMap id="dB" in="Bc" in2="lens" scale="15" xChannelSelector="R" yChannelSelector="G" result="Bd"/>
     <feBlend in="Rd" in2="Gd" mode="screen" result="rg"/>
     <feBlend in="rg" in2="Bd" mode="screen"/>
   </filter>
@@ -1227,49 +1261,57 @@ const PROJECTS = [
     name:"Gravity Pong", focus:0.50, url:"https://anshulpatria.github.io/gravitypong/", input:"Keys", type:"Game",
     myth:"You meant to leave an hour ago.",
     desc:"Pong with gravity wells in the court. Power shots, magnets, one or two players.",
-    thumb:"shots/gravity-pong.webp" },
+    thumb:"shots/gravity-pong", w:[760,1500,2900], pos:"center",
+    span:12, ar:"12 / 5" },
 
   { ord:"II", plate:"eye", field:3,
     name:"Pin Art 3D", focus:0.50, focusX:0.11, url:"https://anshulpatria.github.io/3D-pin-art/", input:"Orbit", type:"Toy",
     myth:"One eye. Press it.",
     desc:"A pinscreen driven by depth. Push pins by hand or imprint a photo, then relight it and orbit.",
-    thumb:"shots/pin-art-3d.webp" },
+    thumb:"shots/pin-art-3d", w:[760,1500], pos:"center",
+    span:6, ar:"3 / 2" },
 
   { ord:"III", plate:"pig", field:1,
     name:"Brand Studio", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/brandstudio/", input:"Cursor", type:"Tool",
     myth:"Turns one thing into another.",
     desc:"Generates brand systems from a metaball grid. Custom SVG and canvas renderer, exports stills and video.",
-    thumb:"shots/brand-studio.webp" },
+    thumb:"shots/brand-studio", w:[760,1500], pos:"center",
+    span:6, ar:"3 / 2" },
 
   { ord:"IV", plate:"song", field:5,
     name:"Field", url:"https://field-8yc.pages.dev/", input:"Cursor", type:"Catalog",
     myth:"Twenty of them, and you will not look away.",
     desc:"Twenty cursor driven generative effects. Run a tile, read the spec, change the parameters, take the source.",
-    thumb:"shots/field.webp" },
+    thumb:"shots/field", w:[760,1500], pos:"center",
+    span:6, ar:"3 / 2" },
 
   { ord:"V", plate:"bottle", field:6,
     name:"GenAI After Hours", url:"https://anshulpatria.github.io/genaiafterhourspub/", input:"Arrows", type:"Deck",
     myth:"Ninety minutes, not seven years.",
     desc:"Slides from a ninety minute session on building microsites with AI tools.",
-    thumb:"shots/genai-after-hours.webp" },
+    thumb:"shots/genai-after-hours", w:[760,1500], pos:"center",
+    span:6, ar:"3 / 2" },
 
   { ord:"VI", plate:"none", field:8,
     name:"Orchestrator", url:"https://youtu.be/oySlLRl5EBI", input:"Click", type:"Video",
     myth:"Agentic workflows for beginners.",
     desc:"A generated video, put together in under sixteen hours of prompting with Magnific.",
-    thumb:"https://img.youtube.com/vi/oySlLRl5EBI/maxresdefault.jpg" },
+    thumb:"shots/orchestrator", w:[760,1500,2048], pos:"center",
+    span:12, ar:"16 / 9" },
 
   { ord:"VII", plate:"raft", field:2,
     name:"Line Visualizer", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/linevisualiser/", input:"Upload", type:"Tool",
     myth:"Built by hand out of what was lying around.",
     desc:"Redraws any image as a line grid. Set density and contrast, export SVG, PNG or WebM.",
-    thumb:"shots/line-visualizer.webp" },
+    thumb:"shots/line-visualizer", w:[760,1500], pos:"center",
+    span:6, ar:"4 / 5" },
 
   { ord:"VIII", plate:"throne", field:7,
     name:"Artboard 42", focus:0.50, focusX:0.50, url:"https://www.artboard42.com", input:"Scroll", type:"Site",
     myth:"Home.",
     desc:"The main portfolio.",
-    thumb:"shots/artboard-42.webp" }
+    thumb:"shots/artboard-42", w:[760,1500], pos:"center",
+    span:6, ar:"4 / 5" }
 ];
 /* ============================================================
    2. THE WORLD
@@ -1917,7 +1959,7 @@ const Ground = (function(){
      of this grid forces every slab to re-blur. Half the rate is half that work,
      and on an ambient texture read through a 6px frost it is not something you
      can see. */
-  const AMBIENT = matchMedia("(hover:none)").matches ? 200 : 100;
+  const AMBIENT = matchMedia("(hover:none)").matches ? 260 : 160;
 
   (function tick(now){
     requestAnimationFrame(tick);
@@ -2066,40 +2108,76 @@ PROJECTS.forEach((p, i) => {
   a.target = "_blank";
   a.rel = "noopener noreferrer";
   a.style.setProperty("--d", (340 + i * 55) + "ms");
+  /* THE COMPOSITION, as data. Span on the twelve column grid, and the frame's
+     own aspect, both chosen to match the picture that goes in it. */
+  a.style.setProperty("--span", String(p.span));
+  a.style.setProperty("--ar", p.ar);
+  a.style.setProperty("--pos", p.pos || "center");
   a.dataset.url   = p.url;
   a.dataset.name  = p.name;
   a.dataset.field = p.field;
   a.dataset.thumb = p.thumb || "";
-  if (p.focus != null) a.dataset.focus = p.focus;
-  if (p.focusX != null) a.dataset.focusx = p.focusX;
+  a.dataset.pos = p.pos || "";
   a.dataset.plate = p.plate;
 
   a.innerHTML = `
-    <span class="glass-t" aria-hidden="true"></span>
-    <span class="glass" aria-hidden="true"></span>
-    <div class="row-in">
-      <div class="side-t">
-        <div class="ep">${p.input}</div>
+    <span class="frame">
+      <img class="shot" alt="" draggable="false"
+           src="${p.thumb}-${p.w[p.w.length - 1]}.webp"
+           srcset="${p.w.map(w => p.thumb + "-" + w + ".webp " + w + "w").join(", ")}"
+           sizes="${p.span === 12 ? "(max-width:720px) 92vw, 92vw"
+                                  : "(max-width:720px) 92vw, (max-width:1080px) 46vw, 46vw"}"
+           loading="${i < 2 ? "eager" : "lazy"}"
+           fetchpriority="${i < 2 ? "high" : "auto"}"
+           decoding="async">
+    </span>
+    <div class="card">
+      <div class="row-in">
         <div class="txt">
+          <div class="ep">${p.input} &middot; ${p.type}</div>
           <h2 class="name">${p.name}</h2>
           <p class="myth">${p.myth}</p>
           <p class="desc">${p.desc}</p>
+          <span class="url">${pretty(p.url)}</span>
         </div>
-      </div>
-      <div class="side-r">
-        <div class="meta">
-        <u>${pretty(p.url)}</u>
-        <span>${p.type}</span>
-          <svg class="arrow" viewBox="0 0 22 22" aria-hidden="true">
-            <line x1="4" y1="18" x2="18" y2="4"></line>
-            <polyline points="8,4 18,4 18,14"></polyline>
-          </svg>
+        <div class="side-r">
+          <span class="cta">Open
+            <span class="glyphs" aria-hidden="true"><i>.</i><i>+</i><i>*</i></span>
+            <svg class="arrow" viewBox="0 0 22 22" aria-hidden="true">
+              <line x1="4" y1="18" x2="18" y2="4"></line>
+              <polyline points="8,4 18,4 18,14"></polyline>
+            </svg>
+          </span>
         </div>
       </div>
     </div>`;
 
   index.appendChild(a);
+
+  /* The webp to jpg fallback and the missing file warning used to sit on the one
+     shared preview image. Each card carries its own picture now, so each one
+     needs them. */
+  const im = a.querySelector(".shot");
+  if (im) im.addEventListener("error", () => {
+    const src = im.getAttribute("src") || "";
+    if (src.indexOf("shots/") === 0 && src.slice(-5) === ".webp"){
+      /* every width ships as both webp and jpg. Drop srcset first or the browser
+         keeps reselecting a webp and the fallback never takes. */
+      im.removeAttribute("srcset");
+      im.src = src.slice(0, -5) + ".jpg";
+      return;
+    }
+    im.style.display = "none";                     /* the frame keeps its shape */
+    if (src.indexOf("shots/") === 0){
+      console.warn("Preview image missing: " + src +
+        "  ->  the shots folder has to be deployed next to index.html.");
+    }
+  });
 });
+
+/* An IntersectionObserver used to live here, toggling a class that turned a
+   live backdrop-filter on for cards "near" the viewport. Reverted along with
+   the CSS it drove; see the comment in ONE GLASS for why. */
 
 
 /* ============================================================
@@ -2113,28 +2191,17 @@ if (!touch && PREVIEW !== "off") {
   const shot = document.getElementById("artShot");
   const live = document.getElementById("artLive");
   let over = null, current = null, bootTimer = null, queued = false;
-  /* the last box written to #art, so a scroll frame that resolves to the same
-     document position does no style work at all */
-  let boxX = NaN, boxY = NaN, boxW = NaN, boxH = NaN;
-  /* PAGE_H and a BEAD reading lived here and nothing read either of them. */
+  /* PAGE_H, a BEAD reading, and a cache of the last box written to #art all
+     lived here. Nothing writes to #art any more; see enter()/leave() below. */
   /* No horizontal aim any more. The iframe is exactly the row's width, so any
      sideways shift left an empty strip, which is why some rows were blank on
      the left while image backed rows were not. */
 
-  /* GenAI After Hours fetched a full size PNG cold, on hover, and you watched it
-     arrive in bands. Fetch and decode the picture backed rows while the page is
-     idle, so the first hover shows a finished image. */
-  (function warmThumbs(){
-    const go = () => PROJECTS.forEach(p => {
-      if (!p.thumb) return;
-      const im = new Image();
-      im.decoding = "async";
-      im.src = p.thumb;
-      if (im.decode) im.decode().catch(() => {});
-    });
-    if (window.requestIdleCallback) requestIdleCallback(go, { timeout:4000 });
-    else setTimeout(go, 1800);
-  })();
+  /* An idle prefetch of all eight pictures lived here, to warm the shared
+     preview before the first hover. The cards carry their own <img> now, so the
+     browser handles it, and the first three are eager while the rest are lazy.
+     Keeping the prefetch would have defeated that and fetched all eight up
+     front. */
 
   shot.addEventListener("load", () => shot.classList.add("ready"));
   shot.addEventListener("error", () => {
@@ -2158,117 +2225,26 @@ if (!touch && PREVIEW !== "off") {
     if (s && s !== "about:blank") live.classList.add("ready");
   });
 
-  function place(){
-    if (!over || !cached) return;
-    const w = cached.w, hh = cached.h;
-    LENS.l = cached.l; LENS.t = cached.t; LENS.w = w; LENS.h = hh;
-    LENS.tl = cached.tl; LENS.tt = cached.tt;
-    LENS.tw = cached.tw; LENS.th = cached.th;
-    LENS.glassT = cached.tVisible ? cached.tEl : null;
+  /* place(), measure()'s pane fields, and paint() lived here, positioning and
+     feeding an #art element that no card has needed since every card grew its
+     own <img>. #art still sits in the document at opacity:0, but nothing has
+     called art.classList.add("on") in a long time, so all of that was work
+     computed every scroll and resize frame for a box nobody was ever shown.
 
-    /* the box is the rectangle, set once per hover. It used to be resized and
-       retranslated on every animation frame, which is what made hovering a row
-       feel choppy even after the rect caching went in.
-
-       Document coordinates: rect + scroll. Both are read in the same frame, so
-       the sum does not change as the page scrolls and the preview cannot drift
-       out of step with the glass in front of it. */
-    const dx = Math.round(cached.l + scrollX), dy = Math.round(cached.t + scrollY);
-    const dw = Math.round(w), dh = Math.round(hh);
-    if (dx !== boxX || dy !== boxY || dw !== boxW || dh !== boxH){
-      boxX = dx; boxY = dy; boxW = dw; boxH = dh;
-      art.style.left   = dx + "px";
-      art.style.top    = dy + "px";
-      art.style.width  = dw + "px";
-      art.style.height = dh + "px";
-    }
-
-    /* the live page is 1280 wide, scaled to the rectangle, then slid so the band
-       named by `focus` lands in the middle of it. Clamped to the page now, so a
-       focus near either end can no longer leave a strip of nothing on show. */
-    const sc = w / 1280;
-    const pageH = 1000 * sc;
-    const f = parseFloat(over.dataset.focus);
-    let y = ((isNaN(f) ? 0.5 : f) * pageH) - hh / 2;
-    y = Math.max(0, Math.min(y, Math.max(0, pageH - hh)));
-    art.style.setProperty("--ls", sc.toFixed(4));
-    art.style.setProperty("--py", (-Math.round(y)) + "px");
-  }
-  addEventListener("scroll", () => {
-    if (over && !queued){
-      queued = true;
-      requestAnimationFrame(() => {
-        queued = false;
-        cached = measure(over); place();
-      });
-    }
-  }, { passive:true });
-  addEventListener("resize", () => {
-    if (over){ cached = measure(over); place(); }
-  }, { passive:true });
-
-  function paint(url, thumb){
-    if (thumb){
-      live.classList.remove("ready");
-      live.src = "about:blank";
-      if (shot.getAttribute("src") !== thumb){ shot.classList.remove("ready"); shot.src = thumb; }
-      else shot.classList.add("ready");
-      return;
-    }
-    shot.classList.remove("ready");
-    if (live.getAttribute("src") === url){ live.classList.add("ready"); return; }
-    live.classList.remove("ready");
-    clearTimeout(bootTimer);
-    bootTimer = setTimeout(() => { if (current === url) live.src = url; }, 140);
-  }
-
-  /* One cached rect per hover. Reading getBoundingClientRect on pointermove
-     forced a synchronous layout on every pointer event, which is what made
-     highlighting a row choppy. */
-  let cached = null;
-  /* Measure the glass, not the row. The old version rebuilt the glass's inset
-     from --glass-edge in JS, so the preview box and the glass box were two
-     computations of the same thing and drifted whenever either changed. */
-  function measure(rw){
-    const g = rw.querySelector(".glass");
-    const r = (g || rw).getBoundingClientRect();
-    const gt = rw.querySelector(".glass-t");
-    const q = gt ? gt.getBoundingClientRect() : null;
-    /* the text pane is measured the same way and from the same element, so both
-       panes open against their own true box */
-    return { l:r.left, t:r.top, w:Math.max(0, r.width), h:Math.max(0, r.height),
-             tl:q ? q.left : 0, tt:q ? q.top : 0,
-             tw:q ? Math.max(0, q.width) : 0, th:q ? Math.max(0, q.height) : 0,
-             tEl:gt, tVisible:!!(gt && q && q.width > 0) };
-  }
-
-  /* A hovered row changes size while it is hovered. Re-pin on every box change
-     rather than only on scroll and resize. */
-  if (window.ResizeObserver){
-    const ro = new ResizeObserver(() => {
-      if (!over) return;
-      cached = measure(over); place();
-    });
-    document.querySelectorAll(".row").forEach(r => ro.observe(r));
-  }
+     A hover-triggered, debounced .glassed class lived here too, giving each
+     card's ring a real backdrop-filter once a hover had settled. Removed along
+     with the CSS that drove it; see the comment in ONE GLASS for why. What is
+     left is the one thing still doing something real: which project's ASCII
+     field is on screen. */
   function enter(rw){
     over = rw;
-    cached = measure(rw);
-    LENS.glass  = rw.querySelector(".glass");
-    LENS.on = true;
     current = rw.dataset.url;
     useField(parseInt(rw.dataset.field, 10));
-    place();
-    art.classList.add("on");
-    paint(rw.dataset.url, rw.dataset.thumb);
   }
   function leave(rw){
     if (over !== rw) return;
-    over = null; cached = null;
-    LENS.on = false;              /* the loop shuts the shape, then lets go */
-    art.classList.remove("on");
+    over = null;
     useField(0);
-    clearTimeout(bootTimer);
   }
 
   document.querySelectorAll(".row").forEach(row => {
@@ -2689,8 +2665,6 @@ if (!touch && PREVIEW !== "off") {
 
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   let tx = innerWidth / 2, ty = innerHeight / 2, cx = tx, cy = ty, seeded = false;
-  const art = document.getElementById("art");
-  const clipEl = document.getElementById("artClip");
 
   addEventListener("pointermove", e => {
     tx = e.clientX; ty = e.clientY;
@@ -2705,27 +2679,22 @@ if (!touch && PREVIEW !== "off") {
   addEventListener("pointerleave", () => dot.classList.remove("live"), { passive:true });
   addEventListener("pointerenter", () => { if (seeded) dot.classList.add("live"); }, { passive:true });
 
-  /* ONE CLOCK.
-     Where the bead is, how open the rectangle is, and what shape the preview is
-     cut to are all decided here, in the same frame, from the same numbers.
-     Nothing in this system has a CSS transition on a size any more, which is
-     what used to let one of them arrive before the others. */
-  let m = 0;                 /* 0 a bead at the pointer, 1 the whole rectangle */
-  let held = null;           /* kept through the close so the shape can shut */
-  let heldT = null;          /* the text pane, closed the same way */
-  /* --bead is a clamp(), and getPropertyValue on an unregistered custom
-     property returns the token text, not a resolved length, so parseFloat on it
-     is NaN. Measure the element: it is the one number that is always true. */
-  let beadPx = dot.offsetWidth || 48;
-  let radPx  = 18;
-  function remeasure(){
-    beadPx = dot.offsetWidth || 48;
-    const r = parseFloat(getComputedStyle(document.documentElement)
-                .getPropertyValue("--glass-radius"));
-    radPx = isFinite(r) ? r : 18;
-  }
-  remeasure();
-  addEventListener("resize", remeasure, { passive:true });
+  /* THE ROW LENS THAT USED TO LIVE HERE IS GONE.
+     This grew a clip-path from the bead's position out to the full glass pane,
+     to reveal a live iframe preview underneath, and toggled .merged on the bead
+     past the halfway point of that growth, which fires `#cur.merged i{opacity:0}`.
+
+     Every card shows its own picture now; there is no pane to reveal. But the
+     growth still ran on every hover, timed from the moment the pointer entered
+     a card rather than from its distance to any edge, so within about half a
+     second of your pointer landing anywhere inside a card, moved or not, the
+     real bead vanished. That is what "the cursor goes missing over the preview
+     images" and "behaves differently from above than from below" both were:
+     not a rendering bug, a five-line state machine nobody needed any more.
+
+     What the frame edge does now is handled entirely by THE MERGE, further
+     down, the same mechanism the nav bar and the pills already use: proximity
+     driven, not time driven, and it never touches this bead's opacity. */
 
   (function loop(){
     requestAnimationFrame(loop);
@@ -2733,54 +2702,6 @@ if (!touch && PREVIEW !== "off") {
     cx += (tx - cx) * k;
     cy += (ty - cy) * k;
     dot.style.transform = "translate3d(" + cx.toFixed(1) + "px," + cy.toFixed(1) + "px,0)";
-
-    if (LENS.on && held !== LENS.glass){
-      if (held)  held.style.clipPath = "";     /* release the row we came from */
-      if (heldT) heldT.style.clipPath = "";
-      held = LENS.glass; heldT = LENS.glassT;
-    }
-    m += ((LENS.on ? 1 : 0) - m) * (reduce ? 1 : 0.19);
-    if (!LENS.on && m < 0.003){
-      m = 0;
-      if (held){ held.style.clipPath = ""; held = null; }
-      if (heldT){ heldT.style.clipPath = ""; heldT = null; }
-      if (clipEl) clipEl.style.clipPath = "";
-    }
-    dot.classList.toggle("merged", m > 0.5);
-
-    if (m > 0 && LENS.w > 0){
-      /* THE SHAPE.
-         One rounded rectangle interpolated from a bead sized square at the
-         pointer out to the full row rectangle, in the rectangle's own
-         coordinates. It goes to the row's glass and to the preview's clip in the
-         same frame from the same numbers, so a leak is not something that gets
-         clipped away afterwards, it is something the geometry cannot express. */
-      const bead = beadPx;
-      const hb = bead / 2;
-      const e = m < 0.5 ? 4*m*m*m : 1 - Math.pow(-2*m + 2, 3) / 2;   /* in out cubic */
-
-      /* One shape, expressed in whichever pane's coordinates it is asked for.
-         Both panes therefore open from the same bead, at the same rate, on the
-         same frame, and the preview's clip is the preview pane's own string. */
-      function shapeFor(px, py, W, H){
-        const bx = Math.max(0, Math.min(cx - px - hb, Math.max(0, W - bead)));
-        const by = Math.max(0, Math.min(cy - py - hb, Math.max(0, H - bead)));
-        const L = bx * (1 - e), T = by * (1 - e);
-        const w2 = bead + (W - bead) * e;
-        const h2 = bead + (H - bead) * e;
-        const rr = hb + (radPx - hb) * e;
-        return "inset(" + T.toFixed(1) + "px " +
-               Math.max(0, W - L - w2).toFixed(1) + "px " +
-               Math.max(0, H - T - h2).toFixed(1) + "px " +
-               L.toFixed(1) + "px round " + rr.toFixed(1) + "px)";
-      }
-
-      const shape = shapeFor(LENS.l, LENS.t, LENS.w, LENS.h);
-      if (held)   held.style.clipPath = shape;
-      if (clipEl) clipEl.style.clipPath = shape;
-      if (heldT && LENS.tw > 0)
-        heldT.style.clipPath = shapeFor(LENS.tl, LENS.tt, LENS.tw, LENS.th);
-    }
   })();
 })();
 
@@ -2829,15 +2750,15 @@ if (!touch && PREVIEW !== "off") {
 
   const S = [
     { k:"radius",  label:"Roundness",   min:0,   max:36,  step:1,    def:18,   unit:"px", css:"--glass-radius" },
-    { k:"edge",    label:"Inset",       min:0,   max:40,  step:1,    def:14,   unit:"px", css:"--glass-edge" },
-    { k:"refract", label:"Refraction",  min:0,   max:120, step:1,    def:100,  unit:"",   filt:1 },
-    { k:"chroma",  label:"Chromatic",   min:0,   max:48,  step:1,    def:6,    unit:"",   filt:1 },
+    { k:"edge",    label:"Inset",       min:0,   max:40,  step:1,    def:18,   unit:"px", css:"--glass-edge" },
+    { k:"refract", label:"Refraction",  min:0,   max:120, step:1,    def:35,   unit:"",   filt:1 },
+    { k:"chroma",  label:"Chromatic",   min:0,   max:48,  step:1,    def:20,   unit:"",   filt:1 },
     { k:"blur",    label:"Frost",       min:0,   max:18,  step:0.5,  def:0,    unit:"px", css:"--glass-blur" },
     { k:"sat",     label:"Saturation",  min:100, max:280, step:5,    def:125,  unit:"%",  css:"--glass-sat" },
     { k:"bright",  label:"Brightness",  min:0.85,max:1.30,step:0.01, def:1.00, unit:"",   css:"--glass-bright" },
-    { k:"tint",    label:"Tint",        min:0,   max:1,   step:0.02, def:0.40, unit:"",   css:"--glass-tint" },
+    { k:"tint",    label:"Tint",        min:0,   max:1,   step:0.02, def:0.20, unit:"",   css:"--glass-tint" },
     { k:"spec",    label:"Edge light",  min:0,   max:1,   step:0.02, def:0.90, unit:"",   css:"--glass-spec" },
-    { k:"shadow",  label:"Shadow",      min:0,   max:0.4, step:0.01, def:0.10, unit:"",   css:"--glass-shadow" }
+    { k:"shadow",  label:"Shadow",      min:0,   max:0.4, step:0.01, def:0.12, unit:"",   css:"--glass-shadow" }
   ];
   const val = {};
 
@@ -3008,7 +2929,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
   /* MEASURED, not a literal. This was a hardcoded 48 while the cursor loop
      measured the element, so raising the --bead token made the bridge draw a
      48px bead where a 62px one actually was, and the handoff popped. */
-  let BEAD = dot.offsetWidth || 62;
+  let BEAD = dot.offsetWidth || 31;
   addEventListener("resize", () => { BEAD = dot.offsetWidth || BEAD; }, { passive:true });
   const IN    = 64;    /* gap at which merging begins, px, edge to edge */
   const OUT   = 92;    /* and at which it lets go. Later than it took hold, so a
@@ -3161,29 +3082,62 @@ document.getElementById("replay")?.addEventListener("click", () => {
     return true;
   }
 
+  /* THE FALLBACK LENS. A candidate with no backdrop-filter of its own used to
+     hand the bridge an empty one, so merging into it produced a tinted blob
+     with no distortion: real glass minus the one thing that makes it read as
+     glass. Cards are exactly this case on purpose, because a live filter on
+     eight full-size elements is what tanked the frame rate two rounds running.
+     So the bridge falls back to the page's own default lens, the same
+     --glass-filter every other surface already uses. The cost of that filter
+     is only ever paid by the ONE shared bridge element, while it is actually
+     near the cursor, exactly the way it already was for the pills. */
+  const fallbackBF = "var(--glass-filter) blur(var(--glass-blur)) " +
+    "saturate(var(--glass-sat)) brightness(var(--glass-bright))";
+  /* Pulled out of refresh() so the intro's own fast path, below, can build one
+     candidate the same way without duplicating this or running the other ten
+     checks that make refresh() worth throttling in the first place. */
+  function buildCandidate(el, isPane){
+    if (!el) return null;
+    const cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden") return null;
+    if (parseFloat(cs.opacity) < 0.92) return null;
+    if (isPane && !paneOpen(cs.clipPath)) return null;   /* still opening, leave it alone */
+    let bf = cs.backdropFilter;
+    if (!bf || bf === "none") bf = cs.webkitBackdropFilter;
+    if (!bf || bf === "none") bf = fallbackBF;
+    const rad = parseFloat(cs.borderTopLeftRadius);
+    /* THE INNER EDGE. A card is not a filled rectangle, it is a ring: its own
+       outer edge, and the picture's edge nine pixels in. Every candidate that
+       has a .frame carries a reference to it and to its own radius, read once
+       here rather than every frame, since a border-radius token does not
+       change without a resize. Everything that makes the ring's second
+       boundary react is downstream of these two extra fields; nothing else
+       about a plain candidate like a pill or #skip changes. */
+    const inner = el.classList.contains("row") ? el.querySelector(".frame") : null;
+    const radIn = inner ? parseFloat(getComputedStyle(inner).borderTopLeftRadius) : 0;
+    /* backgroundImage alone was not the material. Reach out carries its blue
+       as a gradient but the pills and the rail can carry a colour underneath
+       it, and a bridge that copied only the image showed the page through
+       where the target showed paint. */
+    return { el, rad: isFinite(rad) ? rad : 0,
+             bg: cs.backgroundImage, bgc: cs.backgroundColor, bf,
+             inner, radIn: isFinite(radIn) ? radIn : 0 };
+  }
+
   function refresh(){
     cand.length = 0;
     const add = (el, isPane) => {
-      if (!el) return;
-      const cs = getComputedStyle(el);
-      if (cs.display === "none" || cs.visibility === "hidden") return;
-      if (parseFloat(cs.opacity) < 0.92) return;
-      if (isPane && !paneOpen(cs.clipPath)) return;   /* still opening, leave it alone */
-      let bf = cs.backdropFilter;
-      if (!bf || bf === "none") bf = cs.webkitBackdropFilter;
-      if (!bf || bf === "none") bf = "";
-      const rad = parseFloat(cs.borderTopLeftRadius);
-      /* backgroundImage alone was not the material. Reach out carries its blue
-         as a gradient but the pills and the rail can carry a colour underneath
-         it, and a bridge that copied only the image showed the page through
-         where the target showed paint. */
-      cand.push({ el, rad: isFinite(rad) ? rad : 0,
-                  bg: cs.backgroundImage, bgc: cs.backgroundColor, bf });
+      const c = buildCandidate(el, isPane);
+      if (c) cand.push(c);
     };
     add(document.querySelector("#rail .rail-in"));      /* the navigation bar */
     add(document.querySelector(".foot .gpill-blue"));   /* Reach out */
     add(document.getElementById("replay"));             /* Replay the intro */
-    if (LENS.on){ add(LENS.glass, true); add(LENS.glassT, true); }  /* the two panes */
+    add(document.getElementById("skip"));                /* Skip to work */
+    /* every card, the same way a pill is a candidate: no LENS indirection left
+       to maintain, the row itself is both the visual frame and the merge
+       target now. */
+    document.querySelectorAll(".row").forEach(row => add(row));
   }
 
   /* ---- HANDOFF. The bridge draws the bead from the moment a target is in
@@ -3213,11 +3167,26 @@ document.getElementById("replay")?.addEventListener("click", () => {
 
     if (!dot.classList.contains("live")) return off();
     if (document.documentElement.classList.contains("booting")) return off();
-    /* the intro is an opaque fullscreen layer, so nothing can merge behind it.
-       This used to be a getComputedStyle plus two property reads, every frame. */
-    if (document.documentElement.classList.contains("intro")) return off();
 
-    if (!(tick++ % 6)){
+    /* THE INTRO IS AN OPAQUE FULLSCREEN LAYER, so the nav bar, the pills and
+       every card behind it are genuinely unreachable, and checking all eleven
+       of them every sixth tick during that stretch was wasted work. But #skip
+       sits ON TOP of the prologue, not behind it, at z-index 101 against the
+       prologue's own 100, and it is the one interactive thing meant to be used
+       while the intro is playing. Returning off() unconditionally here is what
+       silently excluded it: candidates were never even built, let alone
+       checked, so #skip could never merge no matter how close the bead got.
+       During the intro this checks exactly one element instead of eleven,
+       which is cheaper than the normal path, not more expensive, and #skip
+       behaves like every other pill again. */
+    const inIntro = document.documentElement.classList.contains("intro");
+    if (inIntro){
+      if (!(tick++ % 6)){
+        cand.length = 0;
+        const c = buildCandidate(document.getElementById("skip"));
+        if (c) cand.push(c);
+      }
+    } else if (!(tick++ % 6)){
       refresh();
       const sp = parseFloat(getComputedStyle(document.documentElement)
                    .getPropertyValue("--glass-spec"));
@@ -3230,16 +3199,42 @@ document.getElementById("replay")?.addEventListener("click", () => {
     const cx = db.left + db.width / 2, cy = db.top + db.height / 2;
     const R0 = BEAD * bs / 2;                /* the bead's own radius */
 
-    /* gap is edge to edge: nearest point on the rectangle, then subtract R */
-    let T = null, box = null, gap = Infinity;
+    /* gap is edge to edge. For a plain candidate (a pill, the nav bar) that is
+       still the nearest point on one rectangle, minus R. For a card it is the
+       nearest point on the RING those two rectangles form, which is the whole
+       fix: the old version measured distance to the outer rectangle only, so
+       the instant the bead was anywhere inside a card, gap read as roughly -R
+       and stayed there all the way to the middle of the photograph. Nothing
+       downstream could tell "just inside the frame" from "dead centre of the
+       picture," so the inner edge never had anything to react to. Measuring
+       against max(distance to outer, -(distance to inner)) is the standard
+       signed-distance trick for a rectangular ring: it reads as approaching
+       glass near either boundary and grows the moment you are simply looking
+       at the photograph, which is what lets it fall back to a plain bead
+       there instead of staying permanently "touching." */
+    let T = null, box = null, boxIn = null, gap = Infinity;
     for (let i = 0; i < cand.length; i++){
       const c = cand[i], r = c.el.getBoundingClientRect();
       if (r.width < 6 || r.height < 6) continue;
       if (r.bottom < -80 || r.top > innerHeight + 80) continue;
-      const nx = Math.max(r.left, Math.min(cx, r.right));
-      const ny = Math.max(r.top,  Math.min(cy, r.bottom));
-      const g = Math.hypot(cx - nx, cy - ny) - R0;
-      if (g < gap){ gap = g; T = c; box = r; }
+      let g, ri = null;
+      if (c.inner){
+        ri = c.inner.getBoundingClientRect();
+        const ocx = (r.left + r.right) / 2, ocy = (r.top + r.bottom) / 2;
+        const ohx = r.width / 2, ohy = r.height / 2;
+        const orad = Math.min(c.rad, Math.min(ohx, ohy));
+        const icx = (ri.left + ri.right) / 2, icy = (ri.top + ri.bottom) / 2;
+        const ihx = ri.width / 2, ihy = ri.height / 2;
+        const irad = Math.min(c.radIn, Math.min(ihx, ihy));
+        const sdOuter = sdRR(cx, cy, ocx, ocy, ohx, ohy, orad);
+        const sdInner = sdRR(cx, cy, icx, icy, ihx, ihy, irad);
+        g = Math.max(sdOuter, -sdInner) - R0;
+      } else {
+        const nx = Math.max(r.left, Math.min(cx, r.right));
+        const ny = Math.max(r.top,  Math.min(cy, r.bottom));
+        g = Math.hypot(cx - nx, cy - ny) - R0;
+      }
+      if (g < gap){ gap = g; T = c; box = r; boxIn = ri; }
     }
     /* Hysteresis. IN takes hold, OUT lets go, and closeness is always measured
        against IN so nothing pops at the moment the bridge appears: at the
@@ -3255,7 +3250,11 @@ document.getElementById("replay")?.addEventListener("click", () => {
        makes the neck stretch thin and break late on the way out. */
     const kWant = KREL * R0 * t;
     kS += (kWant - kS) * (kWant > kS ? 0.34 : 0.11);
-    const K = kS;
+    /* CLAMPED TO THE TARGET, not just the bead. A fillet larger than the thing
+       it is filleting does not round a corner, it swallows the object: at a 67px
+       smoothing radius the Reach out pill, 44px tall, became a balloon and the
+       lens smeared its label out through the neck. */
+    const K = Math.min(kS, Math.min(box.width, box.height) * 0.55);
 
     /* the target swallows part of the bead as it absorbs it, so the merged body
        does not read as the panel plus a marble stuck to it */
@@ -3265,7 +3264,25 @@ document.getElementById("replay")?.addEventListener("click", () => {
     const rhx = box.width / 2, rhy = box.height / 2;
     const rad = Math.min(T.rad, Math.min(rhx, rhy));
 
-    const fRect = (x, y) => sdRR(x, y, rcx, rcy, rhx, rhy, rad);
+    /* THE RING ITSELF. Everything past this point — the mouth, the
+       anticipation bulge, the seam the rim breaks along — was already written
+       generically against "the target's own distance field," so none of it
+       needed to change to gain a second boundary. It only needed to be handed
+       one that has two: max(distance to outer, -(distance to inner)) is
+       negative inside the glass band, and positive both outside the whole card
+       and inside the picture, which is exactly the shape a ring is. */
+    let fRect;
+    if (boxIn){
+      const icx = (boxIn.left + boxIn.right) / 2, icy = (boxIn.top + boxIn.bottom) / 2;
+      const ihx = boxIn.width / 2, ihy = boxIn.height / 2;
+      const irad = Math.min(T.radIn, Math.min(ihx, ihy));
+      fRect = (x, y) => Math.max(
+        sdRR(x, y, rcx, rcy, rhx, rhy, rad),
+        -sdRR(x, y, icx, icy, ihx, ihy, irad)
+      );
+    } else {
+      fRect = (x, y) => sdRR(x, y, rcx, rcy, rhx, rhy, rad);
+    }
     const m0 = R + K * 0.55, md = (R + K * 1.15 + 6) - m0;
     function mouth(x, y){
       const u0 = (Math.hypot(x - cx, y - cy) - m0) / md;
@@ -3310,7 +3327,10 @@ document.getElementById("replay")?.addEventListener("click", () => {
     }
     /* nothing outside the target means the cursor has been absorbed: the
        target alone IS the merged body, which is the gap <= 0 end of the spec */
-    if (!isFinite(x0)){ setBead(true); hide(); clearCut(); return; }
+    /* Absorbed: the bead is inside the target and there is nothing to bridge.
+       The bead comes BACK here. Hiding it and hiding the bridge in the same frame
+       is what made the cursor disappear over links. */
+    if (!isFinite(x0)){ setBead(false); hide(); clearCut(); return; }
 
     /* the box is the TIGHT bounding box of the blob, and that is what keeps the
        lens honest: the filter region scales with the silhouette exactly as it
@@ -3373,7 +3393,7 @@ document.getElementById("replay")?.addEventListener("click", () => {
       }
       drawn++;
     }
-    if (!drawn){ setBead(true); hide(); clearCut(); return; }
+    if (!drawn){ setBead(false); hide(); clearCut(); return; }
 
     setBead(true);
 
