@@ -203,34 +203,35 @@ a{ color:inherit; text-decoration:none; }
 .rail em{ font-style:normal; color:var(--signal); }
 
 /* A div, not a span, so .rail span above does not match it and apply the
-   readout's own type to the wrapper as well.
-
-   44px, not the 22 it was. Two things come out of that number. The gap is what
-   moves the icon left, since the button's own layout width is unchanged (see
-   below), so the icon's right edge now sits 44px off the readout instead of 22.
-   And 44px is also the free space the enlarged hit area needs on its right
-   without reaching under the text. */
+   readout's own type to the wrapper as well. 44px, not the 22 it was: it is the
+   gap that moves the icon left, and it is also the clearance the enlarged hit
+   area needs on its right without reaching under the text. */
 .rail-end{ display:flex; align-items:baseline; gap:44px; }
 
-/* THE HIT AREA IS 44px. THE ICON IS STILL 16.
-   A 16px square is a fair target with a mouse and a poor one with a thumb, and
-   this is the only control in the rail, so it should be the easiest thing on the
-   page to hit. box-sizing is border-box globally, so width 44 with padding 14
-   leaves exactly the 16px the svg wants.
+/* The button's parking space. Present from the first paint, so the rail does not
+   reflow at the moment the button arrives. Baseline aligned like everything else
+   in the row, with the same 1px nudge the icon used to carry, since an svg has no
+   baseline of its own to sit on. */
+.mute-slot{
+  display:block; width:16px; height:16px;
+  align-self:center; position:relative; top:1px;
+}
 
-   The negative margin is what makes this free. -14px on each side cancels the 28
-   the box grew by, so the button still occupies 16px of layout and neither the
-   rail's height nor the readout's position moves by a pixel: the extra 28px of
-   clickable area is spent outward, over margin that was doing nothing. */
+/* THE HIT AREA IS 44px. THE ICON IS STILL 16.
+   A 16px square is fair with a mouse and poor with a thumb, and this is the only
+   control on the page, so it should be the easiest thing to hit. box-sizing is
+   border-box globally, so width 44 with padding 14 leaves exactly the 16px the
+   svg wants, and being fixed it costs no layout anywhere.
+
+   Fixed at the origin and moved only by transform. Both of its homes are then
+   the same kind of value, which is what lets one transition carry it between
+   them; left and top would not animate across a change of containing block. */
 .mute{
   appearance:none; -webkit-appearance:none;
-  background:none; border:0;
+  background:none; border:0; margin:0;
+  position:fixed; left:0; top:0; z-index:101;
   width:44px; height:44px; padding:14px;
-  margin:-14px;
   display:grid; place-items:center;
-  /* the row is baseline aligned and an svg has no baseline of its own, so it is
-     nudged to sit with the cap height of the readout beside it */
-  align-self:center; position:relative; top:1px;
   color:var(--ink-soft);
   cursor:pointer;
   touch-action:manipulation;          /* no 300ms tap delay on the phone */
@@ -238,7 +239,7 @@ a{ color:inherit; text-decoration:none; }
   transition:color .25s var(--ease), opacity .25s var(--ease);
 }
 .mute:hover{ color:var(--ink); }
-/* on the box now, not tight around the glyph, so the ring shows what is actually
+/* on the box, not tight around the glyph, so the ring shows what is actually
    clickable rather than implying the old 16px target */
 .mute:focus-visible{ outline:2px solid var(--signal); outline-offset:-4px; border-radius:12px; }
 .mute svg{ display:block; width:16px; height:16px; overflow:visible; }
@@ -879,6 +880,7 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
 }
 
 
+
 #runway{ height:1450vh; }
 
 
@@ -1046,6 +1048,17 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   <div class="boot-ascii" aria-hidden="true"><span class="boot-lbl"><span id="bootLbl">Refracting field</span><span id="bootDots">...</span></span><span class="boot-track"><span class="boot-fill" id="bootFill"></span><span class="boot-rest" id="bootRest"></span></span> <span class="boot-pct" id="bootPct">0%</span></div>
 </div>
 
+<button id="mute" class="mute" type="button" aria-pressed="false" aria-label="Mute sound" title="Mute sound">
+  <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <path class="mute-cone" d="M3 6h2l3-2.6v9.2L5 10H3z"/>
+    <g class="mute-on">
+      <path d="M10.4 5.6a3.4 3.4 0 0 1 0 4.8"/>
+      <path d="M12.3 3.7a6 6 0 0 1 0 8.6"/>
+    </g>
+    <g class="mute-off"><path d="M10.8 6.2l3.4 3.6M14.2 6.2l-3.4 3.6"/></g>
+  </svg>
+</button>
+
 <button id="skip" class="gpill gpill-sm" type="button">Skip to work</button>
 
 <div id="prologue" aria-hidden="true">
@@ -1063,16 +1076,13 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
     <div class="rail-in">
       <b>Anshul Patria</b>
       <div class="rail-end">
-        <button id="mute" class="mute" type="button" aria-pressed="false" aria-label="Mute sound" title="Mute sound">
-          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-            <path class="mute-cone" d="M3 6h2l3-2.6v9.2L5 10H3z"/>
-            <g class="mute-on">
-              <path d="M10.4 5.6a3.4 3.4 0 0 1 0 4.8"/>
-              <path d="M12.3 3.7a6 6 0 0 1 0 8.6"/>
-            </g>
-            <g class="mute-off"><path d="M10.8 6.2l3.4 3.6M14.2 6.2l-3.4 3.6"/></g>
-          </svg>
-        </button>
+        <!-- The button itself is not here. .shell is a stacking context at
+             z-index 2, so nothing inside it can rise above the prologue at 100,
+             and the button has to be reachable during the odyssey. It lives at
+             document level next to #skip and is placed by measuring this slot,
+             which exists only to reserve the 16px so the rail does not reflow
+             when the button arrives. -->
+        <span id="muteSlot" class="mute-slot" aria-hidden="true"></span>
         <span>now drawing <em id="fieldTag">contour field</em></span>
       </div>
     </div>
@@ -2016,18 +2026,13 @@ const Ground = (function(){
 
 
 /* 2b. SOUND
-   Three things only, and no more: the ambient bed, the glass tile, and the
-   haptic pulse the cursor makes while the intro is on screen.
+   Three outputs: the ambient bed, the glass tile under the cursor, and the tap
+   the scroll makes while the prologue is on screen.
 
      zung(x, soft)  a tile. soft is the leaving half, resonance without attack
-     detent(v)      one haptic pulse, cursor driven, intro only
+     tap(v)         one detent. v 0..1 is scroll speed
 
-   The project-opening run and the field-change noise cloud that used to live
-   here are gone: with the tile and the pulses both running they stacked into
-   everything sounding at once.
-
-   Buses: sfx at 0.5 and music at 0.75 of full, both under one mute. Nothing can
-   start before the first real gesture, which is browser policy, not a choice. */
+   Buses: sfx at 0.5 and music at 0.2625 of full, both under one mute. */
 const Sfx = (function(){
   const KEY = "mx30-sound";
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -2038,37 +2043,25 @@ const Sfx = (function(){
   const MUSIC_GAIN = 0.2625;
   const SFX_GAIN = 0.5;
 
-  /* WHICH VOICE IS FITTED.
-     Change these two strings, or press shift+S in the page to audition all of
-     them live; the choice is remembered in localStorage.
-
-       GLASS  "veil"  breath over a cold pane, the softest, no strike at all
-              "zung"  the same body excited, low Q, a dull knock with a tail
-              "sheen" light grazing an edge, airy and high, almost nothing
-              "field" no discrete hits whatsoever: one continuous pad that
-                      swells while the cursor works and settles when it stops
-
-       TAP    "tick"  dry and precise, no low end, a mechanical detent
-              "thock" transient plus one cycle of mass, closest to a Taptic tap
-              "grain" all noise, a ratchet tooth, the most neutral
-              "hush"  barely audible, for when the tick is already too much   */
-  let GLASS = "veil";
-  let TAP   = "thock";
-  try {
-    const g = localStorage.getItem("mx30-glass"); if (g) GLASS = g;
-    const t = localStorage.getItem("mx30-tap");   if (t) TAP = t;
-  } catch (e) {}
+  /* Audition all of these in glass-material.html, then set them here.
+       GLASS  frost breath pane halo glint drag tide hush
+       TAP    tick thock grain hush                                          */
+  const GLASS = "hush";
+  const TAP   = "thock";
 
   let muted = false;
   try { muted = localStorage.getItem(KEY) === "off"; } catch (e) {}
 
   let ctx = null, master = null, sfxBus = null, musicBus = null, warm = null, verb = null;
-  let noiseBuf = null, musicOn = false, musicEl = null, musicSrc = null;
+  let noiseBuf = null, musicOn = false, musicEl = null;
   let lastDetent = -1e9, density = 0, densityAt = 0;
 
   function build(){
     if (ctx || !AC) return ctx;
     try { ctx = new AC(); } catch (e) { return null; }
+    ctx.addEventListener
+      ? ctx.addEventListener("statechange", () => running())
+      : (ctx.onstatechange = () => running());
     master = ctx.createGain();
     master.gain.value = muted ? 0 : 1;
     master.connect(ctx.destination);
@@ -2086,16 +2079,11 @@ const Sfx = (function(){
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < n; i++) d[i] = Math.random()*2 - 1;
 
-    /* THE SHARED TAIL, AND WHY IT IS THE WHOLE TRICK.
-       Every glass voice sends a little of itself here. One tail shared by all of
-       them is what makes a fast sweep read as one lit object rather than as a
-       list of separate events: hit fifteen tiles in a second and you do not hear
-       fifteen sounds, you hear the same body still ringing from the first while
-       the fifteenth arrives. Taps deliberately send nothing, because a haptic
-       with a tail is no longer a haptic.
-
-       The impulse is a dark exponential decay, generated rather than loaded, so
-       there is still exactly one binary file next to this page. */
+    /* THE SHARED TAIL. Every glass voice sends a little of itself here, and one
+       tail shared by all of them is what makes a fast sweep read as one lit
+       object instead of a list of events. Taps send nothing: a haptic with a tail
+       is no longer a haptic. The impulse is a generated dark decay, so there is
+       still only one binary file beside this page. */
     try {
       const cv = ctx.createConvolver();
       const secs = 2.4, len = Math.floor(ctx.sampleRate * secs);
@@ -2117,13 +2105,35 @@ const Sfx = (function(){
     return ctx;
   }
 
-  function arm(){
-    if (!build()) return;
-    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+  /* ARMING, AND WHY THE BED ONLY STARTED AFTER A MUTE AND AN UNMUTE.
+     resume() does not reject when it is refused. Called without user activation
+     Chrome RESOLVES the promise and leaves the context suspended, so the old code
+     took the first wheel event, resolved, tore every listener down and scheduled
+     the whole bed onto a context that had never started. Nothing was left to retry.
+     Clicking mute called arm() directly, that resume had real activation behind
+     it, the context started and the already scheduled buffer became audible: the
+     bed appeared to need a mute and an unmute to exist.
+
+     So the state is what is trusted, never the promise. Nothing is torn down and
+     nothing starts until ctx.state actually reads running, and statechange is
+     watched as well, since the browser can start the context on its own account
+     after a gesture this code never saw. */
+  const GESTURES = ["pointerdown", "pointerup", "mousedown", "click",
+                    "keydown", "keyup", "touchstart", "touchend", "wheel"];
+  let armedUp = false;
+
+  function running(){
+    if (armedUp || !ctx || ctx.state !== "running") return;
+    armedUp = true;
+    for (const ev of GESTURES) removeEventListener(ev, arm);
     music();
   }
-  for (const ev of ["pointerdown", "keydown", "touchstart"])
-    addEventListener(ev, arm, { once:true, passive:true });
+  function arm(){
+    if (!build()) return;
+    if (ctx.state === "running"){ running(); return; }
+    ctx.resume().then(running).catch(() => {});
+  }
+  for (const ev of GESTURES) addEventListener(ev, arm, { passive:true });
 
   function withCtx(fn){
     if (muted || !build()) return;
@@ -2134,82 +2144,47 @@ const Sfx = (function(){
   }
 
   /* ============================ THE MATERIAL ============================
+     Two rules, and every voice below obeys both.
 
-     TWO RULES, AND EVERYTHING BELOW FOLLOWS FROM THEM.
+     1. Nothing has a pitch. No oscillator, no note table, no playbackRate. The
+        only sound source in here is a noise buffer.
+     2. No resonance is sharp enough to be heard as one. A bandpass fed with
+        noise rings for Q/(pi*f) seconds, so a high Q is an oscillator in all but
+        name. Every Q here is at or under 1.6, which rings for well under a cycle.
 
-     1. NOTHING MAY HAVE A PITCH. No oscillator carries the sound, there is no
-        note table, and the word playbackRate does not appear in this file. The
-        only oscillator anywhere is one fixed 92 Hz half cycle inside "thock",
-        which is over before a second cycle can start, so it is a mass and not
-        a tone.
+     Variation between hits comes from stereo position, level, tail length, top
+     end, and the shared tail in build(). Never from pitch. */
 
-     2. NOTHING MAY HAVE A RESONANCE SHARP ENOUGH TO BE HEARD AS A PITCH. This
-        is the part the previous version got wrong, and it is worth being blunt
-        about because it is the reason tiles sounded like piano keys. That
-        version had no notes in it either: noise, fixed frequencies, no rate
-        changes. But it excited five bandpass filters at Q 5 to 17, and a high Q
-        bandpass fed with noise IS an oscillator, near enough, because it rings
-        for Q/(pi*f) seconds. Q 9 at 284 Hz rings long enough to be heard as a
-        D, and 463 and 703 sat on top of it, so each tile played a chord. Worse,
-        the per hit jitter was applied to Q and to decay, which changed WHICH
-        band dominated, so the perceived note moved from tile to tile. That is a
-        melody, arrived at without ever writing one down.
-
-        So every Q here is at or under 2.6. At Q 2.2 and 150 Hz the ring lasts
-        about five milliseconds, a fifth of one cycle. It is a knock. And the
-        band gains are FIXED, never jittered, so the centre of the spectrum
-        cannot wander between hits.
-
-     WHERE THE VARIATION COMES FROM INSTEAD: stereo position, level, tail
-     length, top end brightness, the crowd thinning below, and the shared tail
-     in build(). Six axes of difference, none of them pitch. */
-
-  /* Overlapping hits are wanted, so there is no cooldown. What there is instead
-     is a decaying count of how much has just been triggered, used to pull each
-     new hit down: sweep the list fast and they melt into one resonance rather
-     than stacking into a wall.
-
-     THE FLOOR MATTERS AS MUCH AS THE SLOPE. An unbounded 1/(1+d) curve does not
-     thin a fast sweep, it mutes it: past about twenty hits in a second the next
-     one rounds to nothing and the page goes silent exactly when the hand is most
-     active, which reads as broken rather than as calm. So the curve bottoms out
-     at 0.12 and stays there. A fast sweep sits about 10dB down and keeps going,
-     which with the shared tail underneath is the wash rather than the wall. */
-  const CROWD_FLOOR = 0.12;
   function crowd(now){
-    density *= Math.pow(0.5, (now - densityAt) / 260);   /* halves every 260ms */
+    density *= Math.pow(0.5, (now - densityAt) / 260);
     densityAt = now;
-    return CROWD_FLOOR + (1 - CROWD_FLOOR) / (1 + density*0.5);
+    /* floored at 0.12: an unbounded 1/(1+d) does not thin a fast sweep, it mutes
+       it, and the page going silent under an active hand reads as broken */
+    return 0.12 + 0.88 / (1 + density*0.5);
   }
 
   const jit = () => 0.85 + Math.random()*0.3;
 
-  /* Per hit destination: a panner into the dry shelf, plus a tap off the same
-     point into the shared tail. x is -1..1 across the viewport, so the sound
-     arrives from where the pointer is. */
+  /* per hit: a panner into the dry shelf, and a tap off the same point into the
+     shared tail. x is -1..1 across the viewport. */
   function outFor(c, x, send){
     let node;
     if (c.createStereoPanner){
       node = c.createStereoPanner();
       node.pan.value = Math.max(-0.85, Math.min(0.85, (x === undefined ? 0 : x) * 0.7));
-    } else {
-      node = c.createGain();
-    }
+    } else node = c.createGain();
     node.connect(warm);
     if (send > 0 && verb){
-      const s2 = c.createGain(); s2.gain.value = send;
-      node.connect(s2); s2.connect(verb);
+      const g = c.createGain(); g.gain.value = send;
+      node.connect(g); g.connect(verb);
     }
     return node;
   }
 
-  /* ONE BAND OF NOISE WITH AN ENVELOPE, the only sound making primitive in here.
-     spec is a chain of filters described as {t,f,q}. off is where in the noise
-     buffer to read: pass the same off to several bands of one hit and they are
-     excited by the same slice of noise, which is what makes them read as one
-     object being struck rather than as several things agreeing to start. */
+  /* One band of noise with an envelope, the only primitive here. Pass the same
+     off to several bands and they read as one object rather than several. */
   function band(c, out, spec, t, peak, atk, dur, off){
-    if (peak < 0.0008) return;      /* below this it is only CPU */
+    if (peak < 0.0008) return;
     const src = c.createBufferSource();
     src.buffer = noiseBuf; src.loop = true;
     let node = src;
@@ -2227,122 +2202,168 @@ const Sfx = (function(){
     src.stop(t + atk + dur + 0.04);
   }
 
-  /* ---- GLASS 1. "veil" : breath over a cold pane -------------------------
-     No strike at all. A slow swell of broad noise around 1 kHz with a low body
-     under it, and the top end cut at a different height every time, which is
-     the only thing that changes. The calmest of the four. */
-  function vVeil(c, x, soft, room){
-    const t = c.currentTime, out = outFor(c, x, 0.50), off = Math.random()*0.9;
-    const peak = (soft ? 0.048 : 0.125) * room;
-    band(c, out, [{t:"bandpass",f:1050,q:0.8},
-                  {t:"lowpass", f:2600 + Math.random()*1700, q:0.4}],
-         t, peak, soft ? 0.075 : 0.045, (soft ? 0.34 : 0.52) * jit(), off);
-    band(c, out, [{t:"bandpass",f:128,q:1.6}],
-         t, peak*0.85, 0.030, 0.38 * jit(), off);
+  /* frost: ice contracting. Ten grains scattered over a quarter second, so the
+     event has no single onset to hear as a strike. */
+  function vFrost(c, x, soft, room){
+    const out = outFor(c, x, 0.45), t = c.currentTime;
+    const peak = (soft ? 0.030 : 0.070) * room;
+    const n = soft ? 6 : 10;
+    for (let i = 0; i < n; i++)
+      band(c, out, [{t:"highpass",f:1800,q:0.5},
+                    {t:"lowpass", f:4200 + Math.random()*2800, q:0.4}],
+           t + Math.random()*(soft ? 0.16 : 0.26),
+           peak*(0.45 + Math.random()*0.55), 0.0015, 0.012 + Math.random()*0.02);
   }
 
-  /* ---- GLASS 2. "zung" : the body excited -------------------------------
-     Three fixed low Q bands and a dulled edge on the arriving half. This is the
-     zung: material, weight, a tail, and no note anywhere in it. */
-  const BODY = [
-    { f: 150, q: 2.2, g: 0.95, d: 0.30 },
-    { f: 320, q: 2.6, g: 0.70, d: 0.24 },
-    { f: 620, q: 2.0, g: 0.34, d: 0.16 }
-  ];
-  function vZung(c, x, soft, room){
-    const t = c.currentTime, out = outFor(c, x, 0.40), off = Math.random()*0.9;
-    const peak = (soft ? 0.062 : 0.165) * room;
-    if (!soft)
-      band(c, out, [{t:"bandpass",f:1500,q:0.7},{t:"lowpass",f:3400,q:0.4}],
-           t, peak*0.34, 0.004, 0.042, off);
-    const life = soft ? 0.6 : 1;
-    for (const b of BODY)                     /* b.g is fixed: never jittered */
-      band(c, out, [{t:"bandpass",f:b.f,q:b.q}],
-           t, peak*b.g, soft ? 0.028 : 0.007, b.d*life*jit(), off);
+  /* breath: air on a cold pane. One slow swell, no onset at all. */
+  function vBreath(c, x, soft, room){
+    const out = outFor(c, x, 0.52), t = c.currentTime, off = Math.random()*0.9;
+    const peak = (soft ? 0.055 : 0.130) * room;
+    band(c, out, [{t:"bandpass",f:780,q:0.9},
+                  {t:"lowpass", f:2100 + Math.random()*1400, q:0.4}],
+         t, peak, soft ? 0.130 : 0.090, (soft ? 0.42 : 0.62)*jit(), off);
+    band(c, out, [{t:"lowpass",f:190,q:0.6}], t, peak*1.7, 0.060, 0.44*jit(), off);
   }
 
-  /* ---- GLASS 3. "sheen" : light grazing an edge -------------------------
-     High, airy, and the quietest by a distance, with the largest share going to
-     the shared tail. A low ghost keeps it from sounding like tape hiss. */
-  function vSheen(c, x, soft, room){
-    const t = c.currentTime, out = outFor(c, x, 0.62), off = Math.random()*0.9;
-    const peak = (soft ? 0.030 : 0.075) * room;
-    band(c, out, [{t:"highpass",f:2200,q:0.5},
-                  {t:"lowpass", f:6200 + Math.random()*2600, q:0.4}],
-         t, peak, soft ? 0.055 : 0.022, (soft ? 0.26 : 0.36) * jit(), off);
-    band(c, out, [{t:"lowpass",f:230,q:0.5}],
-         t, peak*2.0, 0.030, 0.28 * jit(), off);
+  /* pane: a large sheet flexing. Weight, and a whisper on top so it is not mud. */
+  function vPane(c, x, soft, room){
+    const out = outFor(c, x, 0.30), t = c.currentTime, off = Math.random()*0.9;
+    const peak = (soft ? 0.070 : 0.165) * room;
+    band(c, out, [{t:"lowpass",f:420,q:0.7}],
+         t, peak, soft ? 0.040 : 0.012, (soft ? 0.24 : 0.36)*jit(), off);
+    band(c, out, [{t:"bandpass",f:2200,q:1.1},{t:"lowpass",f:3600,q:0.4}],
+         t, peak*0.14, 0.006, 0.055*jit(), off);
   }
 
-  /* ---- GLASS 4. "field" : no discrete hits at all -----------------------
-     The strongest possible answer to "moving quickly should not sound like keys
-     being pressed": there is nothing to press. One noise voice runs from the
-     first gesture to the last, silent at rest. A tile does not trigger a sound,
-     it adds energy to a running total, and that total drives level and cutoff.
-     Work the list and the pad opens and brightens; stop and it settles. There
-     is no event to count, so there is nothing to hear as rhythm or melody. */
+  /* halo: almost nothing dry. You hear the room lighting up, not the hit. */
+  function vHalo(c, x, soft, room){
+    const out = outFor(c, x, 0.95), t = c.currentTime;
+    const peak = (soft ? 0.050 : 0.115) * room;
+    band(c, out, [{t:"bandpass",f:1400,q:0.8},{t:"lowpass",f:3000,q:0.4}],
+         t, peak, soft ? 0.055 : 0.030, (soft ? 0.12 : 0.19)*jit());
+  }
+
+  /* glint: light caught on an edge. Short, high, and mostly tail. */
+  function vGlint(c, x, soft, room){
+    const out = outFor(c, x, 0.70), t = c.currentTime, off = Math.random()*0.9;
+    const peak = (soft ? 0.032 : 0.075) * room;
+    band(c, out, [{t:"highpass",f:4200,q:0.5},
+                  {t:"lowpass", f:7600 + Math.random()*1800, q:0.4}],
+         t, peak, 0.004, (soft ? 0.045 : 0.080)*jit(), off);
+    band(c, out, [{t:"lowpass",f:260,q:0.5}], t, peak*1.5, 0.020, 0.16*jit(), off);
+  }
+
+  /* drag: a fingertip travelling. The cutoff opens and closes across the event
+     and the level is modulated by slow noise, which is what friction is. Both
+     are broadband, so neither can imply a pitch. */
+  function vDrag(c, x, soft, room){
+    const out = outFor(c, x, 0.35), t = c.currentTime;
+    const peak = (soft ? 0.048 : 0.105) * room;
+    const dur = (soft ? 0.24 : 0.38) * jit();
+
+    const src = c.createBufferSource();
+    src.buffer = noiseBuf; src.loop = true;
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass"; lp.Q.value = 0.5;
+    lp.frequency.setValueAtTime(520, t);
+    lp.frequency.linearRampToValueAtTime(2100 + Math.random()*600, t + dur*0.42);
+    lp.frequency.linearRampToValueAtTime(600, t + dur);
+    const hp = c.createBiquadFilter();
+    hp.type = "highpass"; hp.frequency.value = 180; hp.Q.value = 0.4;
+
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.045);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(hp).connect(lp).connect(g).connect(out);
+    src.start(t, Math.random()*0.9);
+    src.stop(t + dur + 0.05);
+
+    /* the roughness: noise under 14Hz added onto the same gain param */
+    try {
+      const am = c.createBufferSource();
+      am.buffer = noiseBuf; am.loop = true;
+      const slow = c.createBiquadFilter();
+      slow.type = "lowpass"; slow.frequency.value = 14; slow.Q.value = 0.4;
+      const depth = c.createGain(); depth.gain.value = peak*0.55;
+      am.connect(slow).connect(depth).connect(g.gain);
+      am.start(t, Math.random()*0.9);
+      am.stop(t + dur + 0.05);
+    } catch (e) {}
+  }
+
+  /* hush: one band, no onset, and almost all of it going to the shared tail.
+     Tuned well away from where it started: level 0.036 to 0.235, tail x1.8, top
+     end down to 2.4kHz and the send nearly wide open. The name is now a poor
+     description of it, but it is kept so this and glass-material.html agree.
+
+     Rendered offline before fitting, worst case 26 crossings a second: peak
+     0.654, so +3.7dB of headroom against a clip. The crowd thinning is doing the
+     work there, holding one crossing at 0.494 and a thrash at 0.654, 2.4dB apart. */
+  function vHush(c, x, soft, room){
+    const out = outFor(c, x, 0.96), t = c.currentTime;
+    const peak = (soft ? 0.235*0.44 : 0.235) * room;
+    band(c, out, [{t:"bandpass",f:1600,q:0.7},{t:"lowpass",f:2400,q:0.4}],
+         t, peak, 0.020, (soft ? 0.028 : 0.048)*1.80*jit());
+  }
+
+  /* tide: no discrete hits at all, which is the one architecture that can never
+     be heard as notes. One voice runs from the first gesture to the last, silent
+     at rest. A tile adds energy to a running total; the total drives level and
+     cutoff. There is no event to count. */
   let fld = null;
-  function vField(x, soft){
+  function vTide(x, soft){
     withCtx(c => {
       if (!fld){
         const src = c.createBufferSource();
         src.buffer = noiseBuf; src.loop = true;
         const hp = c.createBiquadFilter();
-        hp.type = "highpass"; hp.frequency.value = 90;  hp.Q.value = 0.3;
+        hp.type = "highpass"; hp.frequency.value = 110; hp.Q.value = 0.3;
         const lp = c.createBiquadFilter();
-        lp.type = "lowpass";  lp.frequency.value = 700; lp.Q.value = 0.4;
+        lp.type = "lowpass"; lp.frequency.value = 620; lp.Q.value = 0.4;
         const g = c.createGain(); g.gain.value = 0;
         const p = c.createStereoPanner ? c.createStereoPanner() : c.createGain();
         src.connect(hp).connect(lp).connect(g).connect(p);
         p.connect(warm);
-        if (verb){ const s2 = c.createGain(); s2.gain.value = 0.55; p.connect(s2); s2.connect(verb); }
+        if (verb){ const sd = c.createGain(); sd.gain.value = 0.58; p.connect(sd); sd.connect(verb); }
         src.start(0);
         fld = { g, lp, p, e: 0, at: performance.now() };
       }
       const f = fld, t = c.currentTime, now = performance.now();
-      f.e *= Math.pow(0.5, (now - f.at) / 520);        /* halves every 520ms */
+      f.e *= Math.pow(0.5, (now - f.at) / 520);
       f.at = now;
       f.e = Math.min(6, f.e + (soft ? 0.35 : 1));
-      const lvl = 0.045 + 0.075 * (1 - Math.pow(0.62, f.e));
+      const open = 1 - Math.pow(0.62, f.e);
       f.g.gain.cancelScheduledValues(t);
       f.g.gain.setValueAtTime(f.g.gain.value, t);
-      f.g.gain.setTargetAtTime(lvl, t, 0.07);         /* open */
-      f.g.gain.setTargetAtTime(0,   t + 0.12, 0.62);  /* and always closing */
-      f.lp.frequency.setTargetAtTime(680 + 1000*(1 - Math.pow(0.70, f.e)), t, 0.10);
+      f.g.gain.setTargetAtTime(0.042 + 0.072*open, t, 0.07);
+      f.g.gain.setTargetAtTime(0, t + 0.12, 0.62);
+      f.lp.frequency.setTargetAtTime(600 + 1050*(1 - Math.pow(0.70, f.e)), t, 0.10);
       if (f.p.pan)
         f.p.pan.setTargetAtTime(Math.max(-0.8, Math.min(0.8, (x || 0) * 0.65)), t, 0.12);
     });
   }
 
-  /* THE PUBLIC TILE CALL. soft is the leaving half: no edge, less level, shorter
-     tail, so it reads as the resonance letting go and not as a second strike. */
+  const VOICES = { frost:vFrost, breath:vBreath, pane:vPane, halo:vHalo,
+                   glint:vGlint, drag:vDrag, hush:vHush };
+
+  /* soft is the leaving half: less level, shorter tail, softer onset, so it
+     reads as the resonance letting go rather than a second strike. */
   function zung(x, soft){
-    if (GLASS === "field"){ vField(x, soft); return; }
+    if (GLASS === "tide"){ vTide(x, soft); return; }
     withCtx(c => {
-      const now = performance.now();
-      const room = crowd(now);             /* 1 when idle, 0.12 under a sweep */
+      const room = crowd(performance.now());
       density += 1;
-      (GLASS === "zung"  ? vZung :
-       GLASS === "sheen" ? vSheen : vVeil)(c, x, soft, room);
+      (VOICES[GLASS] || vBreath)(c, x, soft, room);
     });
   }
 
-  /* ======================= THE HAPTIC, SCROLL DRIVEN =======================
-
-     WHAT WAS WRONG BEFORE. The old pulse swept a sine from 188 Hz down to
-     152 Hz over 24 ms and let it decay for 26 ms. A falling low sine with a
-     soft tail is, acoustically, exactly a raspberry, which is why it read as
-     one. Three changes fix it and they are all subtractive:
-
-       no glide      pitch movement in the low mids is the entire effect. The
-                     one voice with any low content holds 92 Hz dead still and
-                     is gone in 11 ms, roughly a single cycle.
-       shorter       nothing here exceeds 12 ms. A real linear resonant actuator
-                     is a mass on a spring that is already stopped; anything you
-                     can hear ringing is a speaker, not a motor.
-       drier         no send to the shared tail from any of these, ever. The
-                     tail is what glass gets; a haptic with reverb on it stops
-                     being felt and starts being heard.                        */
+  /* ======================= THE TAP, SCROLL DRIVEN ==========================
+     The old pulse swept a sine 188Hz down to 152Hz over 24ms and let it decay
+     for 26ms. A falling low sine with a soft tail is a raspberry, which is why
+     it sounded like one. Three subtractive fixes: no glide anywhere, nothing
+     longer than 12ms, and no send to the shared tail from any of these, since a
+     haptic with reverb on it stops being felt and starts being heard. */
 
   function tTick(c, amt){          /* dry, precise, no low end */
     band(c, warm, [{t:"bandpass",f:1900,q:1.2},{t:"lowpass",f:5200,q:0.4}],
@@ -2354,7 +2375,8 @@ const Sfx = (function(){
          t, 0.024 + 0.020*amt, 0.0010, 0.005, off);
     const o = c.createOscillator();
     o.type = "sine";
-    o.frequency.value = 92;        /* FIXED. the glide was the fart. */
+    /* fixed, and gone inside one cycle, so it is a mass and not a tone */
+    o.frequency.value = 92;
     const g = c.createGain();
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(0.030 + 0.030*amt, t + 0.0015);
@@ -2373,15 +2395,9 @@ const Sfx = (function(){
 
   function tap(v){
     const now = performance.now();
-    /* A BACKSTOP, NOT A RATE POLICY. The scroll stride keeps normal use at 45ms
-       or wider on its own; this only catches something pathological, such as a
-       programmatic scroll storm.
-
-       30 and not 34, because scroll events land on frames. A 45ms target cannot
-       be honoured exactly at 60Hz, so the pulses alternate 33ms and 50ms around
-       it, and a 34ms backstop would have clipped one of every two. 30 sits under
-       the true quantisation floor of 33, so it never fires in ordinary use and
-       cannot scramble the phase. */
+    /* A backstop, not a rate policy: the scroll stride keeps normal use at 45ms
+       or wider. 30 and not 34 because scroll events land on frames, so a 45ms
+       target alternates 33 and 50, and 34 would have clipped one in two. */
     if (now - lastDetent < 30) return;
     lastDetent = now;
     const amt = Math.max(0, Math.min(1, v === undefined ? 0.5 : v));
@@ -2390,49 +2406,29 @@ const Sfx = (function(){
                   TAP === "hush"  ? tHush  : tThock)(c, amt));
   }
 
-  /* ======================== THE LOOP, AND THE HOLE =======================
+  /* THE LOOP.
+     The old scheme crossfaded a fresh copy over the last 2.2s of the previous
+     one. Textbook, and useless on this file: ambient.mp3 fades in over forty
+     seconds and out over eighteen, with 298ms of encoder padding at the head, so
+     both ends of that crossfade were 25dB under the track's own level. Not a
+     seam, a two second hole every two and a half minutes.
 
-     WHAT WAS ACTUALLY WRONG. The old scheme scheduled a fresh copy 2.2s before
-     the last one ended and equal power crossfaded the overlap, which is textbook
-     and which cannot work on this particular file. Measured off ambient.mp3:
+     Instead: trim to the part that is at level, then bake the crossfade into the
+     buffer once so playback is a single looping source with nothing to schedule.
+     Envelope in 250ms windows, keep the run within about 2dB of the median, and
+     rewrite the first X samples as
 
-       decoded length          150.01s
-       leading silence         298ms of it, encoder padding
-       first 2.2s              25.6dB below the track's median level
-       last 2.2s               also far below it
+         out[i] = S[i]*sin(u) + S[L+i]*cos(u),   u = (i/X)*pi/2
 
-     The track fades in over about forty seconds and fades out over fourteen. So
-     the crossfade was blending near silence with near silence: not a seam, a
-     2.2 second HOLE at -25.6dB, once every two and a half minutes, with 298ms of
-     dead air parked at the head of every lap. Constant power arithmetic is no
-     help when both inputs are already at nothing.
+     so the sample after the loop's last is the one that followed it in the
+     recording. Continuous by construction. In place is safe and saves a second
+     90MB buffer: only [L, L+X) is read and only [0, X) is written.
 
-     WHAT REPLACES IT. Trim to the part of the track that is actually at level,
-     then bake the crossfade into the buffer once, so playback is a single looping
-     source and there is nothing left to schedule.
-
-       1. an envelope in 250ms windows, and its median
-       2. keep only the run of windows within about 2dB of that median, which
-          discards the fade in, the fade out and the padding in one step
-       3. of that run, length N, take a crossfade X of 4s and a loop L = N - X
-       4. rewrite the first X samples in place as
-                out[i] = S[i]*sin(u) + S[L+i]*cos(u),  u = (i/X)*pi/2
-          so the sample after the loop's last is the one that followed it in the
-          original recording. The join is continuous by construction.
-       5. loopStart and loopEnd, loop = true, start once
-
-     In place is safe and saves a second 90MB buffer: the only samples read are
-     [L, L+X), the far tail, and the only samples written are [0, X).
-
-     Measured on the result: the seam sits 2.4dB under the median, the quietest
-     natural moment in the loop sits 3.1dB under it, so the join is no longer the
-     quietest point and there is nothing to listen for. The step across the join
-     is 0.0015, against 0.0086 for an ordinary 99.9th percentile sample step
-     inside the material, so it cannot click either.
-
-     And because it is one source with loop = true, a backgrounded tab cannot
-     miss a handover. The old version needed two seconds of setTimeout lookahead
-     for exactly that reason; that whole mechanism is gone. */
+     Measured: the join sits 4.0dB under the median and the quietest natural
+     moment sits 4.7dB under, so the join is not the weak point; the step across
+     it is 0.0009 against 0.0062 for an ordinary sample step, so it cannot click.
+     One source with loop = true also means a backgrounded tab cannot miss a
+     handover, which is what the old two second setTimeout lookahead was for. */
 
   const LOOP_GATE = 0.80;   /* keep windows above this fraction of the median */
   const LOOP_XF   = 4.0;    /* seconds baked into the join */
@@ -2481,9 +2477,8 @@ const Sfx = (function(){
     return { start: s0/sr, end: (s0 + L)/sr };
   }
 
-  /* fetch first, then XMLHttpRequest, which unlike fetch will still read a
-     sibling file from a file:// page in some browsers. Only if both fail does
-     the seamed <audio> element fallback come out. */
+  /* fetch, then XHR, which unlike fetch can still read a sibling file from a
+     file:// page in some browsers. Only if both fail is the element used. */
   function grab(){
     return fetch(MUSIC_URL)
       .then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
@@ -2516,7 +2511,6 @@ const Sfx = (function(){
         src.connect(musicBus);
         const t = ctx.currentTime;
         src.start(t + 0.05, lp ? lp.start : 0);
-        musicSrc = src;
         /* six seconds, not four: the bed should arrive without an entrance */
         musicBus.gain.setValueAtTime(0.0001, t);
         musicBus.gain.linearRampToValueAtTime(MUSIC_GAIN, t + 6);
@@ -2532,12 +2526,10 @@ const Sfx = (function(){
       });
   }
 
-  /* ONE SWITCH FOR EVERY OUTPUT, INCLUDING THE ONES THAT ARE NOT SOUND.
-     The button says "mute" but what a visitor means by it is "stop", so the
-     device motor has to answer to it too. Sfx cannot name Haptics directly:
-     Haptics is declared later in the file and referencing a const before its
-     initialiser is a ReferenceError, not undefined, so even typeof would throw.
-     A list of callbacks avoids the ordering problem entirely. */
+  /* The button says mute, but what a visitor means by it is stop, so the device
+     motor answers to it too. Sfx cannot name Haptics directly, since Haptics is
+     declared later and reaching a const before its initialiser throws rather
+     than reading undefined, so callbacks carry it instead. */
   const muteHooks = [];
   function onMute(fn){ muteHooks.push(fn); }
 
@@ -2556,29 +2548,7 @@ const Sfx = (function(){
     return muted;
   }
 
-  /* Setters for the shift+S panel. Nothing else in the page calls these. */
-  function setGlass(v){
-    GLASS = v;
-    try { localStorage.setItem("mx30-glass", v); } catch (e) {}
-  }
-  function setTap(v){
-    TAP = v;
-    try { localStorage.setItem("mx30-tap", v); } catch (e) {}
-  }
-  function setMusic(v){
-    const g = Math.max(0, Math.min(1, v));
-    if (musicEl) musicEl.volume = g;
-    if (musicBus && ctx){
-      const t = ctx.currentTime;
-      musicBus.gain.cancelScheduledValues(t);
-      musicBus.gain.setValueAtTime(musicBus.gain.value, t);
-      musicBus.gain.linearRampToValueAtTime(g, t + 0.25);
-    }
-  }
-
-  return { zung, tap, detent: tap, setMuted, isMuted: () => muted, arm, onMute,
-           setGlass, setTap, setMusic,
-           glass: () => GLASS, tap_: () => TAP, musicGain: () => MUSIC_GAIN };
+  return { zung, tap, detent: tap, setMuted, isMuted: () => muted, arm, onMute };
 })();
 
 /* Delegated, because the rows do not exist yet when this runs. closest() folds a
@@ -2613,6 +2583,63 @@ const Sfx = (function(){
 })();
 
 
+/* WHERE THE MUTE BUTTON SITS, AND HOW IT GETS THERE.
+   Two homes. During the odyssey it is fixed near the top left, mirroring the skip
+   pill across the viewport, because sound and vibration both begin at the top of
+   the story and the control that stops them has to be reachable there. Once the
+   index is reached it takes its place in the rail.
+
+   Both homes are expressed as a transform on the same fixed element, so one
+   transition carries it between them. The rail home is measured off #muteSlot
+   rather than hardcoded, because the rail is sticky, it retracts to a floating
+   capsule with its own margins once you are into the projects, and its readout
+   drops out entirely under 720px. Anything written as a constant here would be
+   wrong in at least three of those states.
+
+   -14 on both axes because the transform positions the 44px box while the slot
+   describes where the 16px glyph goes, and the glyph sits 14px inside. */
+const MuteDock = (function(){
+  const b = document.getElementById("mute");
+  const slot = document.getElementById("muteSlot");
+  if (!b || !slot) return { set(){} };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  let intro = true, sliding = 0, tick = 0, lx = null, ly = null;
+
+  function target(){
+    if (intro){
+      const pad = Math.min(68, Math.max(12, innerWidth * 0.04));   /* clamp(12,4vw,68) */
+      return [pad - 14, 4];
+    }
+    const r = slot.getBoundingClientRect();
+    return [r.left - 14, r.top - 14];
+  }
+
+  function place(animate){
+    const [x, y] = target();
+    if (lx !== null && Math.abs(x - lx) < 0.5 && Math.abs(y - ly) < 0.5) return;
+    lx = x; ly = y;
+    b.style.transition = (animate && !reduce) ? "transform .78s var(--ease)" : "none";
+    b.style.transform = "translate(" + x.toFixed(1) + "px," + y.toFixed(1) + "px)";
+    if (animate && !reduce){
+      clearTimeout(sliding);
+      sliding = setTimeout(() => { sliding = 0; }, 820);
+    }
+  }
+
+  addEventListener("resize", () => place(false), { passive:true });
+  /* the rail moves under the scroll, so the parked position is re-read as it
+     does, one rAF at a time, and never while the slide is still running */
+  addEventListener("scroll", () => {
+    if (tick || intro || sliding) return;
+    tick = requestAnimationFrame(() => { tick = 0; place(false); });
+  }, { passive:true });
+
+  place(false);
+  return { set(on){ if (on === intro) return; intro = on; place(true); } };
+})();
+
+
 /* aria-pressed true means muted, matching the label. Painted from the stored
    state on load, so a muted visitor is not told the sound is on. */
 (function wireMute(){
@@ -2635,30 +2662,27 @@ const Sfx = (function(){
 })();
 
 
-/* THE DEVICE'S OWN MOTOR, if it has one the web can reach.
-   Same principle as the audible tap and a separate accumulator, because the two
-   want very different distances: a motor pulse is coarse and costs battery, so
-   it wants to be rarer than the sound by a factor of about five.
+/* THE DEVICE'S OWN MOTOR, if it has one the web can reach. Its own accumulator,
+   because a motor pulse is coarse and costs battery, so it wants to be about five
+   times rarer than the sound.
 
-   TWO BACKENDS, ONE OF WHICH IS A TRICK.
-     Android    navigator.vibrate(ms). Real, documented, and blunt: the whole
-                phone buzzes rather than ticking, and durations under about 10ms
-                are quietly rounded up or dropped by the platform, so there is no
-                point asking for less.
-     iOS        navigator.vibrate does not exist. What does work is clicking a
-                hidden <input type="checkbox" switch>, which fires the system
-                switch haptic through the Taptic Engine: crisp, properly short,
-                and much better than Android's. It is also undocumented and
-                iOS 18 or later, so it is wrapped and allowed to fail silently.
-     Desktop    nothing. There is no web API for the Force Touch actuator in a
-                MacBook trackpad, private AppKit only, so a laptop gets sound and
-                nothing else. This is not a permission we are missing.
+     Android   navigator.vibrate(ms). Real and documented, but blunt: the whole
+               phone buzzes rather than ticking, and the 8 to 14ms it used to ask
+               for was below what a phone motor can actually produce. An ERM motor
+               has to spin up and stop again, which takes twenty to thirty
+               milliseconds before anything reaches a fingertip, so the calls were
+               succeeding and being felt as nothing.
+     iOS       navigator.vibrate does not exist. Clicking a hidden
+               <input type="checkbox" switch> fires the system switch haptic
+               through the Taptic Engine instead: crisp and properly short, but
+               undocumented and iOS 18 or later, so it is wrapped and allowed to
+               fail silently.
+     Desktop   nothing. There is no web API for a MacBook trackpad's Force Touch
+               actuator, private AppKit only. Not a permission we are missing.
 
-   THE COAST RULE. While a finger is down, the pulses track it closely, which is
-   what makes the page feel like it has teeth. Once the finger lifts, momentum is
-   the phone's doing and not the hand's, so the stride widens by 2.2x and then
-   stops entirely after 1.5s. That is most of the battery saving and it is also
-   the more honest behaviour: you feel the ratchet while you are turning it. */
+   The coast rule: while a finger is down the pulses track it, since that is what
+   makes the page feel like it has teeth. Once it lifts, momentum is the phone's
+   doing and not the hand's, so the stride widens and then stops. */
 const Haptics = (function(){
   const KEY = "mx30-haptics";
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
@@ -2677,8 +2701,8 @@ const Haptics = (function(){
   let on = kind !== null;
   try { if (localStorage.getItem(KEY) === "off") on = false; } catch (e) {}
 
-  let armed = false, sw = null, last = -1e9, travel = 0;
-  let down = false, upAt = -1e9, gagged = false;
+  let sw = null, last = -1e9, travel = 0;
+  let down = false, upAt = -1e9, gagged = false, armed = false;
 
   /* The mute button stops the motor as well as the speakers, and vibrate(0)
      cancels anything already running rather than waiting for it to finish. */
@@ -2691,9 +2715,14 @@ const Haptics = (function(){
   });
   if (Sfx.isMuted()) gagged = true;
 
-  addEventListener("touchstart", () => { down = true; armed = true; }, { passive:true });
-  addEventListener("touchend",   () => { down = false; upAt = performance.now(); }, { passive:true });
-  addEventListener("touchcancel",() => { down = false; upAt = performance.now(); }, { passive:true });
+  /* touchstart tracks the finger for the coast rule; it does not arm anything,
+     because it grants no activation. The events below it do. */
+  addEventListener("touchstart", () => { down = true; }, { passive:true });
+  for (const ev of ["touchend", "touchcancel", "pointerup", "click", "keydown"])
+    addEventListener(ev, () => {
+      if (ev === "touchend" || ev === "touchcancel"){ down = false; upAt = performance.now(); }
+      armed = true; refused = 0;
+    }, { passive:true });
 
   /* Rendered, not display:none, or Safari has nothing to fire the haptic on.
      Zero opacity, one pixel, no pointer events, out of the tab order. */
@@ -2712,18 +2741,37 @@ const Haptics = (function(){
     return sw;
   }
 
+  /* ACTIVATION, WHICH IS THE REST OF WHY ANDROID FELT DEAD.
+     The set of events that grant user activation does not include touchstart.
+     A touch drag grants nothing until touchend, so every pulse during the scroll
+     that mattered, the one under the moving thumb, was being refused. Arming on
+     touchstart was arming on the wrong end of the gesture.
+
+     Rather than guess, the return value is used: vibrate() reports false when the
+     request was ignored. So it is always attempted, and three refusals in a row
+     stand it down until an event that really does grant activation arrives. The
+     first flick of a fresh page is therefore silent and everything after it works,
+     which is as close as the platform allows.
+
+     Returns whether anything actually happened. */
+  let refused = 0;
   function fire(amt){
     if (iOS){
       const el = switchEl();
-      if (el) try { el.click(); } catch (e) {}
-    } else {
-      try { navigator.vibrate(Math.round(8 + 6*amt)); } catch (e) {}
+      if (!el) return false;
+      try { el.click(); return true; } catch (e) { return false; }
     }
+    /* 22 to 36ms. Below about twenty a phone motor cannot spin up and stop again
+       in time to be felt at all. */
+    try { return navigator.vibrate(Math.round(22 + 14*amt)) !== false; }
+    catch (e) { return false; }
   }
 
   /* dy is one scroll event's absolute delta, amt is 0..1 speed. */
   function step(dy, amt){
-    if (!on || !kind || !armed || gagged) return;
+    if (!on || !kind || gagged) return;
+    /* stood down after three refusals, until a real activation event resets it */
+    if (refused >= 3 && !armed) return;
     const now = performance.now();
     const coasting = !down;
     if (coasting && now - upAt > LETGO){ travel = 0; return; }
@@ -2733,7 +2781,7 @@ const Haptics = (function(){
     travel %= stride;
     if (now - last < GAP) return;
     last = now;
-    fire(amt);
+    if (fire(amt)) refused = 0; else refused++;
   }
 
   function set(v){
@@ -2742,7 +2790,7 @@ const Haptics = (function(){
     if (!on){
       travel = 0;
       if (canVibrate) try { navigator.vibrate(0); } catch (e) {}
-    } else if (!gagged) fire(0.6);
+    } else if (!gagged){ armed = true; refused = 0; fire(0.6); }
     return on;
   }
   /* Called when the page leaves the prologue, so nothing banked outside the
@@ -2754,57 +2802,54 @@ const Haptics = (function(){
 })();
 
 
-/* THE AUDIBLE TAP, DRIVEN BY THE SAME ACCUMULATED DISTANCE.
-   One pulse per stride of scrolled pixels, not per interval of time, so the rate
-   follows the wheel rather than the clock.
+/* THE AUDIBLE TAP, ON THE SAME ACCUMULATED DISTANCE, ON POINTER DEVICES ONLY.
+   A phone or a tablet gets the tk tk tk from its own motor, under the thumb that
+   is doing the scrolling, which is where that signal belongs. Playing it through
+   the speaker as well would be the same event twice, once as touch and once as
+   sound, and the two cannot stay in step. A laptop has no motor the web can
+   reach, so there the speaker is the only way to say it.
 
-   THE STRIDE IS NOT CONSTANT, AND THIS IS THE WHOLE POINT. With a fixed 46px a
-   crawl at 0.3px/ms puts pulses 150ms apart, which is right, but a throw at
-   3.4px/ms puts them 13ms apart. That is not a ratchet, it is a buzz, and worse,
-   the 28ms ceiling inside tap() was then eating two pulses out of every three
-   and scrambling the phase of whatever survived, which is most of why fast
-   scrolling felt broken rather than fast.
+   (pointer:coarse) is the test, not a user agent string: it asks what the primary
+   pointer actually is, so a desktop with a touchscreen still counts as a desktop
+   and an iPad still counts as a handheld. It is watched rather than read once,
+   because plugging in a mouse can change the answer.
 
-   Two clicks closer together than about forty milliseconds stop being two
-   clicks. That is auditory fusion and no amount of tuning gets around it, so it
-   is written into the stride as an inequality rather than discovered later:
+   A fixed stride is wrong at speed: 46px at 3.4px/ms puts pulses 13ms apart,
+   which is a buzz, and the rate ceiling then ate two in three and scrambled the
+   phase of the rest. Two clicks closer than about 40ms stop being two clicks, so
+   that limit is written into the stride rather than tuned around:
 
        stride = max(BASE, TIGHT * velocity)
 
-   The second term is the whole idea. TIGHT is in milliseconds, velocity is in
-   px per ms, so their product is the distance the page must travel for TIGHT ms
-   to have passed. Ask for a pulse every that-many pixels and the pulses land
-   TIGHT apart no matter how fast the wheel is going. BASE takes over at low
-   speed, where distance rather than time should set the rate.
+   TIGHT is in ms and velocity in px per ms, so the product is the distance the
+   page must travel for TIGHT ms to pass. BASE takes over at low speed, where
+   distance rather than time should set the rate.
 
-       crawl   0.25px/ms   42px   tk.....tk.....tk.....tk     168ms, even
-       slow    0.6         42px   tk..tk..tk..tk               70ms
-       brisk   1.5         67px   tk.tk.tk.tk.tk               45ms
-       throw   5.0        225px   tktktktktktk                 45ms, holds
+       crawl  0.25px/ms   42px   tk.....tk.....tk    168ms, even
+       brisk  1.5         68px   tk.tk.tk.tk         45ms
+       throw  5.0        225px   tktktktktk          45ms, holds
 
-   So density climbs from six a second to twenty two and then stops climbing,
-   because past that there is nothing left to hear. Nothing is ever dropped, the
-   phase stays even at every speed, and tap()'s ceiling never engages: it is now
-   only a backstop against a programmatic scroll storm.
+   Density climbs from four a second to twenty two and stops, because past that
+   there is nothing left to hear.
 
-   THE ODYSSEY ONLY. Both the tap and the motor belong to the ascii story and
-   stop at the door. Scrolling through the prologue is a mechanism you are
-   operating, and a detent per notch tells you the thing is moving under your
-   hand; scrolling the index is reading, and a tick under every paragraph is a
-   page that will not sit still. So html.intro is the gate, the same class the
-   prologue already sets. Landing clears it, parking clears it, skipping clears
-   it, and scrolling back up into the story sets it again.
+   THE ODYSSEY ONLY. Both the tap and the motor belong to the ascii story and stop
+   at the door: scrolling the prologue is operating a mechanism, and a detent per
+   notch says the thing is moving under your hand, but scrolling the index is
+   reading, and a tick under every paragraph is a page that will not sit still.
+   html.intro is the gate. The accumulator is cleared on the way out rather than
+   paused, so distance banked in the index cannot fire on re-entry, while prev and
+   at are updated either way, or the first scroll back in would see the whole
+   index as one delta.
 
-   The accumulator is reset on the way out rather than merely paused, so the
-   distance banked in the index cannot fire a pulse on re-entry. prev and at are
-   still updated on every event, in or out, because if they were not, the first
-   scroll after coming back would see the entire index as one delta.
-
-   Two more guards. A delta over 900px is a jump and not a scroll, which is how
-   the page's own scrollTo calls at load and at landing stay silent. A velocity
-   floor keeps a one pixel trackpad tremor from counting. */
+   Two more guards. A delta over 900px is a jump, not a scroll, which is how the
+   page's own scrollTo calls stay silent. A velocity floor ignores tremor. */
 (function wireScroll(){
   const root = document.documentElement;
+  const coarse = matchMedia("(pointer:coarse)");
+  let handheld = coarse.matches;
+  if (coarse.addEventListener) coarse.addEventListener("change", e => { handheld = e.matches; });
+  else if (coarse.addListener) coarse.addListener(e => { handheld = e.matches; });
+
   const BASE  = 42;                /* px per pulse at a crawl */
   const TIGHT = 45;                /* ms: the closest two pulses may ever fall */
   const FLOOR = 0.05;              /* px per ms below which nothing fires */
@@ -2833,77 +2878,8 @@ const Haptics = (function(){
     travel %= stride;              /* keep the remainder: the phase stays honest
                                       over a long scroll instead of resetting */
     if (vel < FLOOR) return;
-    Sfx.tap(amt);
+    if (!handheld) Sfx.tap(amt);   /* the motor has it on a phone */
   }, { passive:true });
-})();
-
-
-/* THE AUDITION PANEL, shift+S. Not shipped UI: a way to sit in the page and
-   switch voices without a rebuild. The choice persists, the panel does not. */
-(function wireAudition(){
-  const G = [["veil","breath over cold glass"],
-             ["zung","the body excited"],
-             ["sheen","light grazing an edge"],
-             ["field","one continuous pad, no hits"]];
-  const T = [["tick","dry and precise"],
-             ["thock","transient plus mass"],
-             ["grain","a ratchet tooth"],
-             ["hush","barely there"]];
-  let box = null;
-
-  function build(){
-    box = document.createElement("div");
-    box.style.cssText = "position:fixed;left:14px;bottom:14px;z-index:99999;" +
-      "font:11px/1.5 ui-monospace,Menlo,monospace;background:rgba(12,12,14,.92);" +
-      "color:#e8e8ea;padding:12px 14px;border-radius:10px;width:236px;" +
-      "backdrop-filter:blur(8px);box-shadow:0 8px 30px rgba(0,0,0,.45)";
-    const h = (t) => "<div style='opacity:.5;letter-spacing:.08em;text-transform:uppercase;margin:0 0 6px'>" + t + "</div>";
-    const rows = (list, kind, cur) => list.map(([k, d]) =>
-      "<button data-k='" + kind + "' data-v='" + k + "' style=\"display:block;width:100%;text-align:left;" +
-      "margin:0 0 4px;padding:5px 7px;border-radius:6px;border:0;cursor:pointer;font:inherit;" +
-      "background:" + (k === cur ? "#3b4cff" : "rgba(255,255,255,.07)") + ";color:inherit\">" +
-      k + "<span style='opacity:.5'>  " + d + "</span></button>").join("");
-    const paint = () => {
-      box.innerHTML =
-        h("glass") + rows(G, "g", Sfx.glass()) +
-        "<div style='height:8px'></div>" +
-        h("scroll tap") + rows(T, "t", Sfx.tap_()) +
-        "<div style='height:8px'></div>" +
-        h("device motor") +
-        (Haptics.kind()
-          ? "<button data-k='h' data-v='x' style=\"display:block;width:100%;text-align:left;" +
-            "margin:0 0 4px;padding:5px 7px;border-radius:6px;border:0;cursor:pointer;font:inherit;" +
-            "background:" + (Haptics.isOn() ? "#3b4cff" : "rgba(255,255,255,.07)") +
-            ";color:inherit\">" + (Haptics.isOn() ? "on" : "off") +
-            "<span style='opacity:.5'>  " + Haptics.kind() + ", every " +
-            Haptics.stride() + "px</span></button>"
-          : "<div style='opacity:.35;padding:2px 0 4px'>none on this device</div>") +
-        "<div style='height:8px'></div>" +
-        h("music") +
-        "<input id='mv' type='range' min='0' max='0.9' step='0.025' value='" +
-        Sfx.musicGain() + "' style='width:100%'>" +
-        "<div style='opacity:.4;margin-top:8px'>shift+S to close</div>";
-      box.querySelectorAll("button").forEach(b => {
-        b.onclick = () => {
-          const v = b.dataset.v;
-          if (b.dataset.k === "g"){ Sfx.setGlass(v); paint(); Sfx.zung(0, false); }
-          else if (b.dataset.k === "h"){ Haptics.set(!Haptics.isOn()); paint(); }
-          else { Sfx.setTap(v); paint(); Sfx.tap(0.8); }
-        };
-      });
-      box.querySelector("#mv").oninput = e => Sfx.setMusic(+e.target.value);
-    };
-    paint();
-    document.body.appendChild(box);
-  }
-
-  addEventListener("keydown", e => {
-    if (!e.shiftKey || (e.key !== "S" && e.key !== "s")) return;
-    if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
-    e.preventDefault();
-    Sfx.arm();
-    if (box){ box.remove(); box = null; } else build();
-  });
 })();
 
 
@@ -3162,15 +3138,15 @@ if (!touch && PREVIEW !== "off") {
   const hot = document.getElementById("layerHot");
 
   /* ONE SIGNAL FOR "THE INTRO IS ON SCREEN". The prologue is an opaque fullscreen white
-     layer, so while it is up nothing behind it can be seen. */
+     layer, so while it is up nothing behind it can be seen. Flipping it also sends
+     the mute button between its two homes. */
   const root = document.documentElement;
-  const showIntro = on => root.classList.toggle("intro", on);
+  const showIntro = on => {
+    root.classList.toggle("intro", on);
+    MuteDock.set(!!on);
+  };
   showIntro(true);
 
-  /* The haptic field used to live here, driven by pointer travel while the
-     prologue was up. It is gone: a pulse under a moving cursor is noise the
-     hand did not ask for. It is driven by scroll distance now, next to the
-     other scroll work in section 2b. */
 
   function kf(p, s){
     if (p <= s[0][0]) return s[0][1];
