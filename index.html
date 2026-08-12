@@ -212,25 +212,31 @@ a{ color:inherit; text-decoration:none; }
    reflow at the moment the button arrives. Baseline aligned like everything else
    in the row, with the same 1px nudge the icon used to carry, since an svg has no
    baseline of its own to sit on. */
+/* 24 wide for a 22px glyph, and still only 16 tall. Height is what the rail's
+   flex line is measured from, so leaving it at 16 keeps the bar exactly the
+   height it has always been while the glyph grows past it. Nothing vertical is
+   read off this any more: MuteDock centres the button on the bar itself, which
+   is the only reference that stays true in all of the rail's shapes. */
 .mute-slot{
-  display:block; width:16px; height:16px;
-  align-self:center; position:relative; top:1px;
+  display:block; width:24px; height:16px;
+  align-self:center; position:relative;
 }
 
-/* THE HIT AREA IS 44px. THE ICON IS STILL 16.
-   A 16px square is fair with a mouse and poor with a thumb, and this is the only
-   control on the page, so it should be the easiest thing to hit. box-sizing is
-   border-box globally, so width 44 with padding 14 leaves exactly the 16px the
-   svg wants, and being fixed it costs no layout anywhere.
+/* THE GLYPH IS 22px AND THE HIT AREA IS 48.
+   It was a 16px glyph in a 44px box, which met the guideline on paper and read
+   as a speck in practice: the only control on the page, and the hardest thing on
+   it to see. 22 is the size at which a crossed out speaker is legible at a
+   glance, 48 is comfortable for a thumb, and a ring appears under the pointer so
+   the target has an edge rather than being an icon floating in a gap.
 
    Fixed at the origin and moved only by transform. Both of its homes are then
    the same kind of value, which is what lets one transition carry it between
    them; left and top would not animate across a change of containing block. */
 .mute{
   appearance:none; -webkit-appearance:none;
-  background:none; border:0; margin:0;
+  background:none; border:0; margin:0; padding:0;
   position:fixed; left:0; top:0; z-index:101;
-  width:44px; height:44px; padding:14px;
+  width:48px; height:48px;
   display:grid; place-items:center;
   color:var(--ink-soft);
   cursor:pointer;
@@ -238,16 +244,28 @@ a{ color:inherit; text-decoration:none; }
   -webkit-tap-highlight-color:transparent;
   transition:color .25s var(--ease), opacity .25s var(--ease);
 }
+/* The edge. inset 6 makes a 36px disc around the 22px glyph, which is the same
+   circle the focus ring draws, so pointer and keyboard are shown the same
+   target. Under the glyph in paint order and never in the way of the pointer. */
+.mute::before{
+  content:""; position:absolute; inset:6px; border-radius:999px;
+  background:rgba(22,23,26,.055);
+  opacity:0; transform:scale(.82);
+  transition:opacity .22s var(--ease), transform .22s var(--ease);
+  pointer-events:none;
+}
+.mute:hover::before, .mute:focus-visible::before{ opacity:1; transform:scale(1); }
+.mute:active::before{ background:rgba(22,23,26,.10); }
 .mute:hover{ color:var(--ink); }
-/* on the box, not tight around the glyph, so the ring shows what is actually
-   clickable rather than implying the old 16px target */
-.mute:focus-visible{ outline:2px solid var(--signal); outline-offset:-4px; border-radius:12px; }
+/* the same 36px circle the hover disc uses, so the ring lands on a shape that is
+   already there instead of implying a square nobody can see */
+.mute:focus-visible{ outline:2px solid var(--signal); outline-offset:-6px; border-radius:999px; }
 
-/* The nudge. Absolutely positioned so it cannot grow the 44px hit box or shift
+/* The nudge. Absolutely positioned so it cannot grow the 48px hit box or shift
    the glyph, and shown only while the prologue is up and audio has not started:
    once it has, there is nothing left to say. */
 .mute-say{
-  position:absolute; left:42px; top:50%;
+  position:absolute; left:48px; top:50%;
   transform:translateY(-50%);
   /* the rail's own readout metrics, so the two read as one system */
   font-size:11px; line-height:1; letter-spacing:.18em; text-transform:uppercase;
@@ -256,14 +274,20 @@ a{ color:inherit; text-decoration:none; }
   transition:opacity .5s var(--ease);
 }
 html.intro .mute[data-live="0"] .mute-say{ opacity:.75; }
-.mute svg{ display:block; width:16px; height:16px; overflow:visible; }
+/* 22, drawn from the same 16 unit viewBox, so the strokes scale with it and have
+   to come down to stay the weight they were: 1.25 of 16 shown at 22 is 1.7 real
+   pixels, against the 1.4 the small one carried. */
+.mute svg{ display:block; width:22px; height:22px; overflow:visible; }
 .mute .mute-cone{ fill:currentColor; stroke:none; }
 .mute .mute-on path, .mute .mute-off path{
-  fill:none; stroke:currentColor; stroke-width:1.4;
+  fill:none; stroke:currentColor; stroke-width:1.25;
   stroke-linecap:round; stroke-linejoin:round;
 }
 .mute .mute-off{ display:none; }
-.mute[aria-pressed="true"]{ color:rgba(22,23,26,.30); }
+/* .30 of the ink on paper is under 2:1 against it, which is a state you cannot
+   read rather than a state that is quietly off. .46 is still clearly the muted
+   one and clears 3:1, which is the bar for a control's own graphics. */
+.mute[aria-pressed="true"]{ color:rgba(22,23,26,.46); }
 .mute[aria-pressed="true"] .mute-on{ display:none; }
 .mute[aria-pressed="true"] .mute-off{ display:block; }
 
@@ -1309,14 +1333,25 @@ const PROJECTS = [
            "shots/orchestrator.webp", "shots/orchestrator.jpg"], pos:"center",
     span:12, ar:"16 / 9" },
 
-  { ord:"VII", plate:"raft", field:2,
+  /* The flat pair, like every other project: shots/live-slides.webp and .jpg,
+     2048 wide and exactly 16:9, which is the frame's own aspect, so nothing is
+     cropped. The webp is first because it is half the weight and the walk in
+     wireShot covers the browser that cannot read it. */
+  { ord:"VII", plate:"none", field:9,
+    name:"The bracket does it again", url:"https://youtu.be/M1nIsHUE6dg", input:"Watch", type:"Video",
+    myth:"Nobody remembers the third bullet.",
+    desc:"A short film for the Live Slides training, on finding the story already sitting inside the most ordinary deck in the building.",
+    shots:["shots/live-slides.webp", "shots/live-slides.jpg"], pos:"center",
+    span:12, ar:"16 / 9" },
+
+  { ord:"VIII", plate:"raft", field:2,
     name:"Engraver", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/linevisualiser/", input:"Upload", type:"Tool",
     myth:"Underneath, it was always lines.",
     desc:"Redraws any image as a grid of strokes. Set the density and the contrast, then export it as SVG, PNG or WebM.",
     shots:["shots/line-visualizer.webp", "shots/line-visualizer.jpg"], pos:"center",
     span:6, ar:"4 / 5" },
 
-  { ord:"VIII", plate:"throne", field:7,
+  { ord:"IX", plate:"throne", field:7,
     name:"Artboard 42", focus:0.50, focusX:0.50, url:"https://www.artboard42.com", input:"Scroll", type:"Site",
     myth:"Home.",
     desc:"The main portfolio.",
@@ -1337,7 +1372,8 @@ const RAMPS = [
   null,           /* 5 compass, drawn by needle() */
   " .,:~=coO@",   /* 6 fluid, soft */
   " .:+x*X#%@",   /* 7 registration marks, crosses */
-  " .:oO=+*#@"    /* 8 agent graph, nodes and wire */
+  " .:oO=+*#@",   /* 8 agent graph, nodes and wire */
+  " .,-:=+*#@"    /* 9 slide sorter, punctuation and rules */
 ];
 let COV = 1;                       /* scratch, avoids allocating per cell */
 
@@ -1831,6 +1867,65 @@ const FIELD = [
       }
     }
     return [v, acc];
+  },
+
+  /* 9. The bracket does it again : a wall of slides, and one of them saying something.
+     The tile is a slide sorter, drawn as the deck itself would be: a frame, a
+     title rule, three bullets set as broken dashes because dashes are what
+     bullets look like from the back of the room. Every tile is the same tile,
+     which is the joke, and each is on a different frame of the same projector
+     flicker, which is what makes a grid of them feel administrative rather than
+     alive.
+
+     Then the pointer arrives, and the three bullets stop being a list: they
+     converge on one line running up and to the right, the title rule opens out,
+     and the slide brightens. That is the whole argument of the film, so it is
+     the whole behaviour of the field. Nothing here moves on its own except the
+     flicker, deliberately. The story is the thing you bring to it. */
+  function (x, y, mx, my, tS, ms){
+    const sw = 0.42, sh = 0.28;                    /* one slide on the wall */
+    const gx = Math.floor(x/sw), gy = Math.floor(y/sh);
+    const cx = (gx + 0.5)*sw, cy = (gy + 0.5)*sh;
+    const lx = x - cx, ly = y - cy;
+    const hw = sw*0.40, hh = sh*0.38;              /* the slide's own margins */
+
+    const infl = gauss(cx - mx, cy - my, 7) * ms;  /* per slide, not per cell, so a
+                                                      whole slide wakes at once */
+    const seed = h21(gx*0.37 + 11.3, gy*0.61 + 4.7);
+    const pass = 0.78 + 0.22*Math.sin(tS*0.85 + seed*6.283);
+
+    let v = 0;
+
+    /* the frame. Thin, and it never quite goes away. */
+    const fd = rbox(lx, ly, hw, hh, 0.018);
+    v = Math.max(v, (1 - sstep(CW*0.20, CW*0.95, Math.abs(fd))) * (0.40 + 0.42*infl) * pass);
+
+    /* the title rule. Three quarters of the width at rest, opening towards the
+       full measure as the slide is read. */
+    const left = -hw*0.86;
+    const barW = hw*(1.28 + 0.52*infl);
+    if (Math.abs(ly - hh*0.56) < CW*0.62 && lx > left && lx < left + barW)
+      v = Math.max(v, (0.72 + 0.26*infl) * pass);
+
+    /* three bullets, and where they go */
+    for (let r = 0; r < 3; r++){
+      const flat = hh*(0.12 - r*0.40);                         /* the list */
+      const rise = hh*(-0.30) + (lx/hw)*hh*0.66;               /* the story */
+      const by = flat + (rise - flat)*infl;
+
+      const dot = 1 - sstep(CW*0.30, CW*0.95, Math.hypot(lx - left, ly - by));
+      v = Math.max(v, dot*(0.62 + 0.38*infl));
+
+      const runW = hw*(1.50 - r*0.20 - seed*0.26);             /* ragged right */
+      if (lx > left + CW*1.6 && lx < left + runW){
+        const line = 1 - sstep(CW*0.24, CW*0.92, Math.abs(ly - by));
+        /* broken, not ruled: the gaps are the word spaces */
+        const set = fr(x*30 + r*0.41 + seed) < 0.64 ? 1 : 0.28;
+        v = Math.max(v, line*set*(0.58 + 0.42*infl)*pass);
+      }
+    }
+
+    return [Math.min(1, v), infl];
   }
 ];
 
@@ -2173,14 +2268,24 @@ const Sfx = (function(){
      after a gesture this code never saw. */
   const GESTURES = ["pointerdown", "pointerup", "mousedown", "click",
                     "keydown", "keyup", "touchstart", "touchend", "wheel"];
-  let armedUp = false;
+  let armedUp = false, everLive = false;
+  /* declared up here rather than beside the handler that sets it, because
+     withCtx below has to read it and a const/let is not readable before its
+     own initialiser has run */
+  let away = false;
   const liveHooks = [];
   function onLive(fn){ liveHooks.push(fn); }
-  function isLive(){ return !!ctx && ctx.state === "running"; }
+  /* THE QUESTION THIS ANSWERS IS "DOES THIS PAGE HAVE SOUND", NOT "IS THE CLOCK
+     TICKING RIGHT NOW". It used to read the context's state directly, which was
+     the same answer until away() below started suspending the context on purpose:
+     from then on a raw state read would call a page with a running bed silent
+     every time the visitor changed tab, and the button would offer to start
+     something that is already started. */
+  function isLive(){ return everLive || (!!ctx && ctx.state === "running"); }
 
   function running(){
-    if (armedUp || !isLive()) return;
-    armedUp = true;
+    if (armedUp || !ctx || ctx.state !== "running") return;
+    armedUp = true; everLive = true;
     for (const ev of GESTURES) removeEventListener(ev, arm);
     music();
     for (const fn of liveHooks) { try { fn(); } catch (e) {} }
@@ -2193,7 +2298,7 @@ const Sfx = (function(){
   for (const ev of GESTURES) addEventListener(ev, arm, { passive:true });
 
   function withCtx(fn){
-    if (muted || !build()) return;
+    if (muted || away || !build()) return;
     if (ctx.state === "running"){ fn(ctx); return; }
     ctx.resume().then(() => {
       /* a hover can be what starts the context, so this path has to raise the
@@ -2608,6 +2713,45 @@ const Sfx = (function(){
     return muted;
   }
 
+  /* AWAY IS SILENT.
+     A bed that is meant to be the room is only the room while you are in it. Web
+     Audio does not stop for a hidden tab, so the ambient goes on playing behind
+     whatever the visitor left to do, out of any context that explains it, and the
+     only way to find out where it is coming from is to hunt through tabs. So the
+     context is suspended the moment the page is hidden and resumed when it comes
+     back. Suspending is the right instrument rather than muting: the clock stops,
+     so the bed continues from where it was instead of from where it would have
+     got to, and nothing decodes or schedules while nobody is listening.
+
+     Only visibilitychange drives it. The window's own blur event looks like the
+     same signal and is not: this page puts live previews in an iframe, and giving
+     one of those focus blurs the window while the tab is still very much the one
+     being looked at.
+
+     away is remembered so that coming back cannot start a context the visitor
+     never started, and cannot resume one they suspended by muting. */
+  function goAway(){
+    if (!ctx || away) return;
+    away = true;
+    if (musicEl){ try { musicEl.pause(); } catch (e) {} }
+    if (ctx.state === "running") ctx.suspend().catch(() => { away = false; });
+  }
+  function comeBack(){
+    if (!ctx || !away) return;
+    away = false;
+    ctx.resume().then(() => {
+      if (musicEl && !muted){ musicEl.play().catch(() => {}); }
+    }).catch(() => {});
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) goAway(); else comeBack();
+  });
+  /* the tab being closed or put into the back/forward cache. pageshow is the
+     other half of it, since a page restored from that cache fires no
+     visibilitychange of its own. */
+  addEventListener("pagehide", goAway);
+  addEventListener("pageshow", () => { if (!document.hidden) comeBack(); });
+
   return { zung, tap, detent: tap, setMuted, isMuted: () => muted, arm, onMute,
            onLive, isLive };
 })();
@@ -2657,23 +2801,47 @@ const Sfx = (function(){
    drops out entirely under 720px. Anything written as a constant here would be
    wrong in at least three of those states.
 
-   -14 on both axes because the transform positions the 44px box while the slot
-   describes where the 16px glyph goes, and the glyph sits 14px inside. */
+   WHY IT USED TO SIT WRONG, AND WHAT IT IS MEASURED FROM NOW.
+   The offsets were two constants, -14 on both axes, which assumed a 44px box
+   around a 16px glyph and a slot whose top edge was where the glyph belonged.
+   Vertically that was never true. The rail is a baseline flex, and the slot is
+   the tallest thing in its line, so the line is as tall as the slot while the
+   readout beside it is three pixels shorter and sits at the top of it. Centring
+   the button on the slot therefore put it a couple of pixels below the type it
+   is meant to sit with, and the two states of the bar move that error around:
+   full bleed the padding is 18 and the corners are square, drawn in it is 12 and
+   the whole thing is a floating capsule. Off centre in one of them was the best
+   the constants could manage.
+
+   So neither number is a constant now. Horizontally the button centres on the
+   slot, which is the only thing that knows where in the row it goes. Vertically
+   it centres on the rail's own box, which is the reference that stays correct in
+   every shape the rail takes, including the narrow tier where the readout is
+   display:none and the slot is the only thing left in the row. And the box's own
+   size is read off the element instead of being written down twice. */
 const MuteDock = (function(){
   const b = document.getElementById("mute");
   const slot = document.getElementById("muteSlot");
+  const bar = document.querySelector("#rail .rail-in");
   if (!b || !slot) return { set(){} };
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   let intro = true, sliding = 0, tick = 0, lx = null, ly = null;
 
   function target(){
+    /* offsetWidth is the untransformed box, so it is safe to read while the
+       element is mid slide; a bounding rect here would feed the transform back
+       into itself. */
+    const w = b.offsetWidth || 48, h = b.offsetHeight || 48;
     if (intro){
       const pad = Math.min(68, Math.max(12, innerWidth * 0.04));   /* clamp(12,4vw,68) */
-      return [pad - 14, 4];
+      /* the glyph's centre stays where it was, at pad + 8 across and 26 down,
+         mirroring the skip pill; only the box around it grew */
+      return [pad + 8 - w*0.5, 26 - h*0.5];
     }
     const r = slot.getBoundingClientRect();
-    return [r.left - 14, r.top - 14];
+    const c = bar ? bar.getBoundingClientRect() : r;
+    return [r.left + r.width*0.5 - w*0.5, c.top + c.height*0.5 - h*0.5];
   }
 
   function place(animate){
@@ -2695,6 +2863,27 @@ const MuteDock = (function(){
     if (tick || intro || sliding) return;
     tick = requestAnimationFrame(() => { tick = 0; place(false); });
   }, { passive:true });
+
+  /* AND WHILE THE BAR IS CHANGING SHAPE. Drawing in to the capsule moves the
+     rail's centre by a few pixels over more than half a second, and scroll is
+     the only thing re-reading the position. Stop scrolling on the frame the
+     class flips and the button is left behind for the rest of the animation, so
+     the transition itself is followed, for as long as it lasts and no longer. */
+  if (bar){
+    let chasing = 0, until = 0;
+    const chase = () => {
+      if (intro || sliding){ chasing = 0; return; }
+      place(false);
+      chasing = performance.now() < until ? requestAnimationFrame(chase) : 0;
+    };
+    const start = () => {
+      until = performance.now() + 700;                  /* .55s plus a margin */
+      if (!chasing && !intro && !sliding) chasing = requestAnimationFrame(chase);
+    };
+    /* one per property, so both are guarded rather than counted */
+    bar.addEventListener("transitionrun", start);
+    bar.addEventListener("transitionend", () => place(false));
+  }
 
   place(false);
   return { set(on){ if (on === intro) return; intro = on; place(true); } };
@@ -3032,7 +3221,7 @@ const LINGER  = 900;          /* ms of steady hover before the real thing loads 
 
 const FIELD_NAME = ["contour field","metaballs","line grid","pinscreen",
                     "gravity wells","flow dashes","fluid","registration marks",
-                    "agent graph"];
+                    "agent graph","slide sorter"];
 const fieldTag = document.getElementById("fieldTag");
 
 /* THE GAP BETWEEN TWO ROWS IS NOT AN INSTRUCTION TO GO IDLE. */
