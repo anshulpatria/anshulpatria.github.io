@@ -242,6 +242,20 @@ a{ color:inherit; text-decoration:none; }
 /* on the box, not tight around the glyph, so the ring shows what is actually
    clickable rather than implying the old 16px target */
 .mute:focus-visible{ outline:2px solid var(--signal); outline-offset:-4px; border-radius:12px; }
+
+/* The nudge. Absolutely positioned so it cannot grow the 44px hit box or shift
+   the glyph, and shown only while the prologue is up and audio has not started:
+   once it has, there is nothing left to say. */
+.mute-say{
+  position:absolute; left:42px; top:50%;
+  transform:translateY(-50%);
+  /* the rail's own readout metrics, so the two read as one system */
+  font-size:11px; line-height:1; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--ink-soft); white-space:nowrap;
+  opacity:0; pointer-events:none;
+  transition:opacity .5s var(--ease);
+}
+html.intro .mute[data-live="0"] .mute-say{ opacity:.75; }
 .mute svg{ display:block; width:16px; height:16px; overflow:visible; }
 .mute .mute-cone{ fill:currentColor; stroke:none; }
 .mute .mute-on path, .mute .mute-off path{
@@ -312,6 +326,9 @@ h1 em.lit-word{ color:var(--signal); }
 }
 .row:hover, .row:focus-visible{ box-shadow:0 16px 44px rgba(22,23,26,.13); }
 
+/* a step down the width list failed too, so show the backing rather than a
+   browser's broken image glyph */
+.frame.no-shot .shot{ display:none; }
 .frame{
   position:relative; z-index:1;
   /* z-index:1, not auto. */
@@ -342,7 +359,10 @@ h1 em.lit-word{ color:var(--signal); }
   transform:scale(1.02);
 }
 
-.card{ padding:14px 8px 5px; }
+/* The text was sitting almost on the frame's left edge. A wider inset on that
+   side gives the block a margin to start from, and the right side comes in with
+   it so the Open pill is not left hanging off the corner. */
+.card{ padding:15px 12px 6px 16px; }
 .row-in{
   position:relative; z-index:2;
   display:grid;
@@ -353,11 +373,19 @@ h1 em.lit-word{ color:var(--signal); }
 .txt{ min-width:0; container-type:inline-size; }
 .side-r{ grid-column:2; align-self:end; }
 
+/* THE EYEBROW, WITHOUT THE MIDDOT.
+   "Keys &middot; Game" is the house style of every generated page on the internet,
+   and the giveaway is precisely the separator: a small piece of punctuation doing
+   a job that spacing does better. So the two facts are simply set apart, the kind
+   first and the control second and a shade lighter. Nothing between them but air,
+   which is also why the order changed: what the thing IS should lead. */
 .ep{
-  font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+  display:flex; align-items:baseline; gap:17px;
+  font-size:10px; letter-spacing:.2em; text-transform:uppercase;
   color:var(--ink-soft);
   transition:color .35s var(--ease);
 }
+.ep span:last-child{ opacity:.58; letter-spacing:.16em; }
 .row:hover .ep{ color:var(--signal); }
 
 .name{
@@ -367,23 +395,37 @@ h1 em.lit-word{ color:var(--signal); }
   font-size:clamp(21px, 8.4cqi, 44px);
   line-height:1;
   letter-spacing:-.026em;
-  margin:5px 0 0;
+  margin:7px 0 0;
   overflow-wrap:break-word;
+  /* two words over two lines beats five and one */
+  text-wrap:balance;
 }
 
-/* CLAMPED, so every card's type block is exactly the same height and a pair of
+/* THREE STEPS, NOT TWO.
+   The voice line and the description used to be 13.5 and 13 in the same colour,
+   half a pixel apart, which is not a hierarchy, it is a rounding error. The line
+   is now clearly the larger of the two and carries a little weight, the
+   description is smaller and quieter, and the name above them is unchanged. Read
+   down a card and the order of importance is now legible without reading a word.
+
+   Both stay clamped, so every card's type block is the same height and a pair of
    tiles cannot end at different depths because one description wrapped further. */
 .myth{
-  margin:7px 0 0; font-size:13.5px; line-height:1.4; color:var(--ink-soft);
+  margin:9px 0 0;
+  font-size:14.5px; font-weight:500; line-height:1.35; letter-spacing:-.004em;
+  color:var(--ink-soft);
+  /* one line, so it cannot orphan: knit() and text-wrap:pretty are for .desc */
   display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical;
   overflow:hidden;
 }
 .row:hover .myth{ color:var(--ink); }
 .desc{
-  margin:6px 0 0; font-size:13px; line-height:1.45; color:var(--ink-soft);
+  margin:7px 0 0;
+  font-size:12.5px; line-height:1.5; color:var(--ink-soft); opacity:.82;
+  text-wrap:pretty;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   overflow:hidden;
-  min-height:calc(2 * 1.45 * 13px);
+  min-height:calc(2 * 1.5 * 12.5px);
 }
 
 /* THE THING TO CLICK. */
@@ -404,8 +446,8 @@ h1 em.lit-word{ color:var(--signal); }
    so the address is the proof. */
 /* .meta held the type label and the arrow. Both moved into .ep and .cta. */
 .url{
-  display:block; margin:9px 0 0;
-  font-size:11.5px; letter-spacing:.02em; text-transform:none;
+  display:block; margin:11px 0 0;
+  font-size:11px; letter-spacing:.03em; text-transform:none; opacity:.72;
   color:var(--ink-soft);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   transition:color .3s var(--ease);
@@ -601,7 +643,8 @@ h1 em.lit-word{ color:var(--signal); }
 }
 @media (max-width:720px){
   .name{ font-size:clamp(25px, 6.6vw, 38px); }
-  .myth, .desc{ font-size:13px; }
+  .myth{ font-size:13.5px; }
+  .desc{ font-size:12.5px; min-height:calc(2 * 1.5 * 12.5px); }
 }
 
 /* 320 to 400. .row-in is the thing that gives out first. */
@@ -610,7 +653,7 @@ h1 em.lit-word{ color:var(--signal); }
   .row-in{ grid-template-columns:minmax(0, 1fr); row-gap:12px; }
   .side-r{ grid-column:1; justify-self:start; align-self:start; }
   .name{ font-size:clamp(24px, 7.6vw, 34px); }
-  .card{ padding:12px 6px 4px; }
+  .card{ padding:12px 9px 4px 12px; }
   .url{ font-size:11px; }
 }
 
@@ -631,8 +674,8 @@ h1 em.lit-word{ color:var(--signal); }
   .frame{ aspect-ratio:3 / 2 !important; }
   .txt{ container-type:normal; }
   .name{ font-size:clamp(19px, 2.6vw, 28px); }
-  .myth{ font-size:12.5px; }
-  .desc{ -webkit-line-clamp:1; min-height:0; font-size:12.5px; }
+  .myth{ font-size:13px; }
+  .desc{ -webkit-line-clamp:1; min-height:0; font-size:12px; }
 }
 
 @media (hover:none){
@@ -896,8 +939,8 @@ html.booting, html.booting body{ overflow:hidden; height:100%; }
   /* the rail readout is the first thing to give up the space */
   .rail span{ display:none; }
   .rail b{ font-size:13px; letter-spacing:.12em; }
-  .myth{ font-size:13px; }
-  .desc{ font-size:13px; }
+  .myth{ font-size:13.5px; }
+  .desc{ font-size:12.5px; min-height:calc(2 * 1.5 * 12.5px); }
   /* a full intro on a thumb is too long a scroll */
   #runway{ height:820vh; }
 }
@@ -1212,62 +1255,72 @@ const Boot = (function(){
 })();
 
 
+/* NO ORPHANS.
+   A single word alone on the last line is the one wrapping fault that reads as
+   carelessness, and it is likeliest in these blocks because they are narrow,
+   clamped, and reflow at every viewport. text-wrap:pretty in the stylesheet asks
+   the browser to avoid it, which Chrome and Safari now honour; this ties the last
+   two words together with a non breaking space so the older ones cannot produce
+   one either. Belt and braces, because the two costs nothing. */
+const knit = t => t.replace(/\s+(\S+)$/, "\u00A0$1");
+
 /* PROJECTS, ordered as the voyage */
 const PROJECTS = [
   { ord:"I", plate:"lotus", field:4,
     name:"Gravity Pong", focus:0.50, url:"https://anshulpatria.github.io/gravitypong/", input:"Keys", type:"Game",
     myth:"You meant to leave an hour ago.",
     desc:"Pong with gravity wells in the court. Power shots, magnets, one or two players.",
-    thumb:"shots/gravity-pong", w:[760,1500,2900], pos:"center",
+    shots:["shots/gravity-pong.webp", "shots/gravity-pong.jpg"], pos:"center",
     span:12, ar:"12 / 5" },
 
   { ord:"II", plate:"eye", field:3,
     name:"Pin Art 3D", focus:0.50, focusX:0.11, url:"https://anshulpatria.github.io/3D-pin-art/", input:"Orbit", type:"Toy",
-    myth:"One eye. Press it.",
-    desc:"A pinscreen driven by depth. Push pins by hand or imprint a photo, then relight it and orbit.",
-    thumb:"shots/pin-art-3d", w:[760,1500], pos:"center",
+    myth:"It holds whatever you press into it.",
+    desc:"A pinscreen driven by depth. Push the pins by hand or imprint a photograph, then relight it and orbit around.",
+    shots:["shots/pin-art-3d.webp", "shots/pin-art-3d.jpg"], pos:"center",
     span:6, ar:"3 / 2" },
 
   { ord:"III", plate:"pig", field:1,
-    name:"Brand Studio", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/brandstudio/", input:"Cursor", type:"Tool",
-    myth:"Turns one thing into another.",
-    desc:"Generates brand systems from a metaball grid. Custom SVG and canvas renderer, exports stills and video.",
-    thumb:"shots/brand-studio", w:[760,1500], pos:"center",
+    name:"Brand Studio", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/brandstudio/", input:"Drag", type:"Tool",
+    myth:"Marks that move until you stop them.",
+    desc:"Builds whole identity systems out of a metaball grid. Custom SVG and canvas renderers, exporting stills and video.",
+    shots:["shots/brand-studio.webp", "shots/brand-studio.jpg"], pos:"center",
     span:6, ar:"3 / 2" },
 
   { ord:"IV", plate:"song", field:5,
-    name:"Field", url:"https://field-8yc.pages.dev/", input:"Cursor", type:"Catalog",
-    myth:"Twenty of them, and you will not look away.",
-    desc:"Twenty cursor driven generative effects. Run a tile, read the spec, change the parameters, take the source.",
-    thumb:"shots/field", w:[760,1500], pos:"center",
+    name:"Field", url:"https://field-8yc.pages.dev/", input:"Hover", type:"Catalog",
+    myth:"Pick one. Then pick another.",
+    desc:"Twenty generative effects that follow the cursor. Open a tile, read how it works, turn the parameters, take the code.",
+    shots:["shots/field.webp", "shots/field.jpg"], pos:"center",
     span:6, ar:"3 / 2" },
 
   { ord:"V", plate:"bottle", field:6,
     name:"GenAI After Hours", url:"https://anshulpatria.github.io/genaiafterhourspub/", input:"Arrows", type:"Deck",
     myth:"Ninety minutes, not seven years.",
     desc:"Slides from a ninety minute session on building microsites with AI tools.",
-    thumb:"shots/genai-after-hours", w:[760,1500], pos:"center",
+    shots:["shots/genai-after-hours.webp", "shots/genai-after-hours.jpg"], pos:"center",
     span:6, ar:"3 / 2" },
 
   { ord:"VI", plate:"none", field:8,
-    name:"Orchestrator", url:"https://youtu.be/oySlLRl5EBI", input:"Click", type:"Video",
-    myth:"Agentic workflows for beginners.",
-    desc:"A generated video, put together in under sixteen hours of prompting with Magnific.",
-    thumb:"shots/orchestrator", w:[760,1500,2048], pos:"center",
+    name:"Orchestrator", url:"https://youtu.be/oySlLRl5EBI", input:"Watch", type:"Video",
+    myth:"Agentic workflows, from scratch.",
+    desc:"A generated film, assembled in under sixteen hours of prompting with Magnific.",
+    shots:["shots/orchestrator-2048.jpg",
+           "shots/orchestrator.webp", "shots/orchestrator.jpg"], pos:"center",
     span:12, ar:"16 / 9" },
 
   { ord:"VII", plate:"raft", field:2,
-    name:"Line Visualizer", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/linevisualiser/", input:"Upload", type:"Tool",
-    myth:"Built by hand out of what was lying around.",
-    desc:"Redraws any image as a line grid. Set density and contrast, export SVG, PNG or WebM.",
-    thumb:"shots/line-visualizer", w:[760,1500], pos:"center",
+    name:"Engraver", focus:0.44, focusX:0.11, url:"https://anshulpatria.github.io/linevisualiser/", input:"Upload", type:"Tool",
+    myth:"Underneath, it was always lines.",
+    desc:"Redraws any image as a grid of strokes. Set the density and the contrast, then export it as SVG, PNG or WebM.",
+    shots:["shots/line-visualizer.webp", "shots/line-visualizer.jpg"], pos:"center",
     span:6, ar:"4 / 5" },
 
   { ord:"VIII", plate:"throne", field:7,
     name:"Artboard 42", focus:0.50, focusX:0.50, url:"https://www.artboard42.com", input:"Scroll", type:"Site",
     myth:"Home.",
     desc:"The main portfolio.",
-    thumb:"shots/artboard-42", w:[760,1500], pos:"center",
+    shots:["shots/artboard-42.webp", "shots/artboard-42.jpg"], pos:"center",
     span:6, ar:"4 / 5" }
 ];
 /* 2. THE WORLD */
@@ -2121,12 +2174,16 @@ const Sfx = (function(){
   const GESTURES = ["pointerdown", "pointerup", "mousedown", "click",
                     "keydown", "keyup", "touchstart", "touchend", "wheel"];
   let armedUp = false;
+  const liveHooks = [];
+  function onLive(fn){ liveHooks.push(fn); }
+  function isLive(){ return !!ctx && ctx.state === "running"; }
 
   function running(){
-    if (armedUp || !ctx || ctx.state !== "running") return;
+    if (armedUp || !isLive()) return;
     armedUp = true;
     for (const ev of GESTURES) removeEventListener(ev, arm);
     music();
+    for (const fn of liveHooks) { try { fn(); } catch (e) {} }
   }
   function arm(){
     if (!build()) return;
@@ -2139,6 +2196,9 @@ const Sfx = (function(){
     if (muted || !build()) return;
     if (ctx.state === "running"){ fn(ctx); return; }
     ctx.resume().then(() => {
+      /* a hover can be what starts the context, so this path has to raise the
+         bed and repaint the button too, not just play its own sound */
+      running();
       if (!muted && ctx.state === "running") fn(ctx);
     }).catch(() => {});
   }
@@ -2548,7 +2608,8 @@ const Sfx = (function(){
     return muted;
   }
 
-  return { zung, tap, detent: tap, setMuted, isMuted: () => muted, arm, onMute };
+  return { zung, tap, detent: tap, setMuted, isMuted: () => muted, arm, onMute,
+           onLive, isLive };
 })();
 
 /* Delegated, because the rows do not exist yet when this runs. closest() folds a
@@ -2642,22 +2703,58 @@ const MuteDock = (function(){
 
 /* aria-pressed true means muted, matching the label. Painted from the stored
    state on load, so a muted visitor is not told the sound is on. */
+/* THE BUTTON HAS TO TELL THE TRUTH, WHICH IT WAS NOT DOING.
+   A browser will not start audio until the visitor performs a gesture that grants
+   user activation, and the list of those does not include scrolling. A wheel or a
+   trackpad grants nothing. The whole odyssey can be read with a wheel alone, and
+   there is no other control in the way, so a visitor could reach the index having
+   given the page no activation at all and hear silence the entire time.
+
+   That much is the platform. What made it feel broken was this button, which
+   showed the unmuted speaker throughout, so it was reporting an intention rather
+   than a fact. The first click on it therefore muted an inaudible page and the
+   second unmuted it, and since a click is activation, the bed arrived on the
+   second one. Hence: off, then on, then sound.
+
+   So the painted state is now muted OR not yet running, and the first click on a
+   page that has never had audio starts it rather than toggling. During the
+   prologue a small label sits beside the glyph saying so, because a crossed out
+   speaker in a corner is easy to read as decoration. Both disappear the moment
+   the context actually starts, however it started. */
 (function wireMute(){
   const b = document.getElementById("mute");
   if (!b) return;
+
+  const say = document.createElement("span");
+  say.className = "mute-say";
+  say.setAttribute("aria-hidden", "true");
+  say.textContent = "sound off";
+  b.appendChild(say);
+
   const paint = () => {
-    const m = Sfx.isMuted();
-    b.setAttribute("aria-pressed", m ? "true" : "false");
-    b.setAttribute("aria-label", m ? "Unmute sound" : "Mute sound");
-    b.title = m ? "Unmute sound" : "Mute sound";
+    const live = Sfx.isLive();
+    const off = Sfx.isMuted() || !live;
+    b.setAttribute("aria-pressed", off ? "true" : "false");
+    b.setAttribute("aria-label", off ? "Turn sound on" : "Mute sound");
+    b.title = off ? "Turn sound on" : "Mute sound";
+    b.dataset.live = live ? "1" : "0";
   };
   paint();
+  Sfx.onLive(paint);          /* audio can start from any gesture, not just this */
+
   b.addEventListener("click", () => {
+    if (!Sfx.isLive()){
+      /* this click is activation, and it is very likely the first the page has
+         had. Start, do not toggle: muting something inaudible helps nobody. */
+      Sfx.setMuted(false);
+      Sfx.arm();
+      paint();
+      setTimeout(() => { paint(); Sfx.zung(0, false); }, 60);
+      return;
+    }
     const nowMuted = Sfx.setMuted(!Sfx.isMuted());
     paint();
-    /* unmuting is itself a gesture, so the context can start here, and a tick
-       confirms the change audibly */
-    if (!nowMuted){ Sfx.arm(); setTimeout(() => Sfx.zung(0, false), 40); }
+    if (!nowMuted) setTimeout(() => Sfx.zung(0, false), 40);
   });
 })();
 
@@ -2672,11 +2769,23 @@ const MuteDock = (function(){
                has to spin up and stop again, which takes twenty to thirty
                milliseconds before anything reaches a fingertip, so the calls were
                succeeding and being felt as nothing.
-     iOS       navigator.vibrate does not exist. Clicking a hidden
-               <input type="checkbox" switch> fires the system switch haptic
-               through the Taptic Engine instead: crisp and properly short, but
-               undocumented and iOS 18 or later, so it is wrapped and allowed to
-               fail silently.
+     iOS       navigator.vibrate does not exist and never has. What worked
+               instead was a side effect of <input type="checkbox" switch>, added
+               in Safari 17.4: toggling one fires the Taptic Engine. Two things
+               about it that the first version of this code got wrong.
+
+               It has to be clicked through an associated <label>. WebKit does not
+               fire the haptic when script calls click() on the input directly,
+               which is exactly what was happening here, so it never worked on any
+               iPhone at all.
+
+               And Apple closed it in iOS 26.5, released May 2026. On 26.5 or
+               later there is no way to fire the Taptic Engine from JavaScript at
+               all: the haptic still happens when a finger lands on a real switch,
+               but not when script toggles one. The window is 17.4 to 26.4, which
+               is why the version is parsed below rather than assumed. Chrome and
+               every other iOS browser are WKWebView, the same engine as Safari,
+               so none of this varies by browser.
      Desktop   nothing. There is no web API for a MacBook trackpad's Force Touch
                actuator, private AppKit only. Not a permission we are missing.
 
@@ -2688,7 +2797,19 @@ const Haptics = (function(){
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
               (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const canVibrate = typeof navigator.vibrate === "function";
-  const kind = iOS ? "ios" : canVibrate ? "android" : null;
+
+  /* 17.4 is when the switch control arrived, 26.5 is when Apple closed the hole.
+     A UA string is a poor thing to branch on, but there is nothing to feature
+     detect here: the trick reports no success or failure, it either buzzes or it
+     does not. An unreadable version counts as unusable, because a page that makes
+     no sound and no movement is worse than one that does the wrong one. */
+  function iosCanHaptic(){
+    const m = /(?:iPhone )?OS (\d+)_(\d+)/.exec(navigator.userAgent);
+    if (!m) return false;
+    const v = +m[1] + (+m[2])/100;
+    return v >= 17.04 && v < 26.05;
+  }
+  const kind = iOS ? (iosCanHaptic() ? "ios" : null) : canVibrate ? "android" : null;
 
   /* Distance thresholds, in px of accumulated scroll. iOS gets the shorter one
      because a Taptic tick is cheap and precise; Android's is nearly double
@@ -2724,20 +2845,31 @@ const Haptics = (function(){
       armed = true; refused = 0;
     }, { passive:true });
 
-  /* Rendered, not display:none, or Safari has nothing to fire the haptic on.
-     Zero opacity, one pixel, no pointer events, out of the tab order. */
+  /* A switch and a label bound to it. The label is what gets clicked, because
+     WebKit does not fire the haptic for a script click on the input itself.
+     Rendered rather than display:none, or there is nothing for Safari to fire on:
+     zero opacity, one pixel, no pointer events, out of the tab order. */
   function switchEl(){
-    if (sw) return sw;
+    if (sw !== null) return sw;
     try {
-      sw = document.createElement("input");
-      sw.type = "checkbox";
-      sw.setAttribute("switch", "");
-      sw.tabIndex = -1;
-      sw.setAttribute("aria-hidden", "true");
-      sw.style.cssText = "position:fixed;left:0;bottom:0;width:1px;height:1px;" +
-                         "opacity:0;pointer-events:none;margin:0;border:0;padding:0";
-      document.body.appendChild(sw);
-    } catch (e) { sw = null; }
+      const id = "h-sw";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.setAttribute("switch", "");
+      box.id = id;
+      box.tabIndex = -1;
+      box.setAttribute("aria-hidden", "true");
+      const lab = document.createElement("label");
+      lab.htmlFor = id;
+      lab.setAttribute("aria-hidden", "true");
+      const hide = "position:fixed;left:0;bottom:0;width:1px;height:1px;" +
+                   "opacity:0;pointer-events:none;margin:0;border:0;padding:0";
+      box.style.cssText = hide;
+      lab.style.cssText = hide;
+      document.body.appendChild(box);
+      document.body.appendChild(lab);
+      sw = lab;
+    } catch (e) { sw = false; }
     return sw;
   }
 
@@ -2761,6 +2893,7 @@ const Haptics = (function(){
       if (!el) return false;
       try { el.click(); return true; } catch (e) { return false; }
     }
+
     /* 22 to 36ms. Below about twenty a phone motor cannot spin up and stop again
        in time to be felt at all. */
     try { return navigator.vibrate(Math.round(22 + 14*amt)) !== false; }
@@ -2797,7 +2930,11 @@ const Haptics = (function(){
      story can fire on the way back in. */
   function reset(){ travel = 0; }
 
-  return { step, set, reset, isOn: () => on, kind: () => kind,
+  /* Whether this device can produce a pulse at all. The scroll wiring asks,
+     because a phone that cannot buzz should get the sound after all. */
+  function available(){ return kind !== null; }
+
+  return { step, set, reset, available, isOn: () => on, kind: () => kind,
            stride: () => STRIDE };
 })();
 
@@ -2850,6 +2987,12 @@ const Haptics = (function(){
   if (coarse.addEventListener) coarse.addEventListener("change", e => { handheld = e.matches; });
   else if (coarse.addListener) coarse.addListener(e => { handheld = e.matches; });
 
+  /* A handheld is meant to feel the detent rather than hear it, but that only
+     holds if it has a motor this code can actually reach. An iPhone on 26.5 or
+     later does not, so rather than give it nothing at all, the sound comes back.
+     Silence is the wrong answer to a missing API. */
+  const audible = () => !handheld || !Haptics.available();
+
   const BASE  = 42;                /* px per pulse at a crawl */
   const TIGHT = 45;                /* ms: the closest two pulses may ever fall */
   const FLOOR = 0.05;              /* px per ms below which nothing fires */
@@ -2878,7 +3021,7 @@ const Haptics = (function(){
     travel %= stride;              /* keep the remainder: the phase stays honest
                                       over a long scroll instead of resetting */
     if (vel < FLOOR) return;
-    if (!handheld) Sfx.tap(amt);   /* the motor has it on a phone */
+    if (audible()) Sfx.tap(amt);   /* the motor has it, where there is one */
   }, { passive:true });
 })();
 
@@ -2922,37 +3065,34 @@ const index  = document.getElementById("index");
 const touch  = matchMedia("(hover: none)").matches;
 
 
-/* THE SHOTS FOLDER. Pictures are shots/<slug>-<width>.webp with a jpg twin at each width.
-   On error it walks down: sized jpg, then flat webp, jpg, png. srcset and sizes are dropped
-   at the first fallback, or the browser keeps reselecting a webp and the jpg step never
-   takes. */
+/* THE SHOTS FOLDER, AND WHY ORCHESTRATOR WAS THE ONE THAT VANISHED.
+   The code asked for shots/<slug>-<width>.webp at three widths and built a srcset
+   out of them. Not one file of that shape is in the repository. What is actually
+   deployed is a single flat pair per project, shots/<slug>.webp and .jpg, with no
+   width in the name at all.
+
+   Seven projects survived that anyway, because the old error handler walked down
+   to the flat names on the third try, so they loaded after three 404s each and
+   nobody noticed. Orchestrator did not survive, because its file is the one
+   exception in the folder: orchestrator-2048.jpg, with a width in the name, no
+   webp twin, and a jpg extension. None of the four names the walk tried existed,
+   so it hid the frame. That was the whole bug, and the cost of the rest of it was
+   roughly twenty-two 404s on every single page load.
+
+   So each project now names the files that are really there, in preference order,
+   and the walk is only a safety net rather than the mechanism. There is one size
+   per picture, so there is no srcset to build: a srcset with a single candidate is
+   just a longer src. To add widths later, list them here widest first. */
 function wireShot(im, p){
   if (!im) return;
-  const flat = [p.thumb + ".webp", p.thumb + ".jpg", p.thumb + ".png"];
-  let step = -1;
-  const tried = [];
-
+  const list = p.shots || [];
+  let next = 1;
   im.addEventListener("error", () => {
-    const had = im.currentSrc || im.getAttribute("src") || "";
-    if (had) tried.push(had.slice(had.lastIndexOf("/") + 1));
-
-    /* first failure: same width, jpg instead of webp */
-    if (step < 0){
-      step = 0;
-      im.removeAttribute("srcset");
-      im.removeAttribute("sizes");
-      im.src = had.slice(-5) === ".webp"
-        ? had.slice(0, -5) + ".jpg"
-        : p.thumb + "-" + p.w[p.w.length - 1] + ".jpg";
-      return;
-    }
-    /* then the flat names, in order */
-    if (step < flat.length){ im.src = flat[step++]; return; }
-
-    im.style.display = "none";            /* the frame keeps its shape and colour */
-    console.warn("No picture found for " + p.name + " in shots/. Tried: " +
-      tried.join(", ") + ". The shots folder has to be deployed next to " +
-      "index.html, and the file names have to match thumb in PROJECTS.");
+    if (next < list.length){ im.src = list[next++]; return; }
+    const f = im.closest(".frame");
+    if (f) f.classList.add("no-shot");    /* the frame keeps its shape and colour */
+    console.warn("No picture for " + p.name + ". Tried: " + list.join(", ") +
+      ". shots/ has to be deployed next to index.html and the names have to match.");
   });
 }
 
@@ -2972,7 +3112,7 @@ PROJECTS.forEach((p, i) => {
   a.dataset.url   = p.url;
   a.dataset.name  = p.name;
   a.dataset.field = p.field;
-  a.dataset.thumb = p.thumb || "";
+  a.dataset.thumb = p.shots[0] || "";
   a.dataset.pos = p.pos || "";
   a.dataset.plate = p.plate;
 
@@ -2980,10 +3120,7 @@ PROJECTS.forEach((p, i) => {
     <span class="frame">
       <!-- loading="lazy" is skipped on touch. -->
       <img class="shot" alt="" draggable="false"
-           src="${p.thumb}-${p.w[p.w.length - 1]}.webp"
-           srcset="${p.w.map(w => p.thumb + "-" + w + ".webp " + w + "w").join(", ")}"
-           sizes="${p.span === 12 ? "(max-width:900px) 92vw, 88vw"
-                                  : "(max-width:900px) 92vw, 45vw"}"
+           src="${p.shots[0]}"
            loading="${(touch || i < 2) ? "eager" : "lazy"}"
            fetchpriority="${i < 2 ? "high" : "auto"}"
            decoding="async">
@@ -2991,10 +3128,10 @@ PROJECTS.forEach((p, i) => {
     <div class="card">
       <div class="row-in">
         <div class="txt">
-          <div class="ep">${p.input} &middot; ${p.type}</div>
+          <div class="ep"><span>${p.type}</span><span>${p.input}</span></div>
           <h2 class="name">${p.name}</h2>
           <p class="myth">${p.myth}</p>
-          <p class="desc">${p.desc}</p>
+          <p class="desc">${knit(p.desc)}</p>
           <span class="url">${pretty(p.url)}</span>
         </div>
         <div class="side-r">
