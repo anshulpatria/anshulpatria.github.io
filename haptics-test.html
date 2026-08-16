@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haptics probe</title>
+<style>
+:root{
+  --bg:#0E0F12; --panel:#16181D; --line:#242832;
+  --ink:#E8E9EC; --dim:#8A8F9C;
+  --yes:#3DD68C; --no:#FF5C5C; --maybe:#FFB020;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--mono);font-size:13px;line-height:1.5;
+  padding:18px 16px 60px;
+  -webkit-text-size-adjust:100%;
+}
+h1{font-size:15px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 4px}
+.sub{color:var(--dim);margin:0 0 22px;font-size:12px}
+h2{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);
+   margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;
+     border-bottom:1px solid var(--line);align-items:flex-start}
+.row span:first-child{color:var(--dim);flex:none}
+.row span:last-child{text-align:right;word-break:break-word}
+.yes{color:var(--yes)} .no{color:var(--no)} .maybe{color:var(--maybe)}
+.verdict{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+         padding:14px;margin:14px 0;font-size:13px}
+.verdict b{display:block;margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase;font-size:11px}
+button{
+  -webkit-appearance:none;appearance:none;
+  width:100%;margin:0 0 9px;padding:15px 14px;
+  background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:10px;
+  font-family:var(--mono);font-size:13px;text-align:left;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+button:active{background:#1E212A}
+button small{display:block;color:var(--dim);font-size:11px;margin-top:3px}
+#log{background:#0A0B0E;border:1px solid var(--line);border-radius:10px;
+     padding:11px;height:190px;overflow-y:auto;font-size:11.5px;white-space:pre-wrap}
+#log div{padding:1px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.pad{height:150vh;display:flex;align-items:center;justify-content:center;
+     color:var(--dim);border:1px dashed var(--line);border-radius:10px;text-align:center;
+     font-size:12px;padding:20px}
+#swrap{position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+
+<h1>Haptics probe</h1>
+<p class="sub">Open this on the phone. Every button below needs a real tap, which is the one thing that grants the permission scrolling cannot.</p>
+
+<h2>What this device reports</h2>
+<div id="facts"></div>
+
+<div class="verdict" id="verdict"><b>Verdict</b><span id="vtext">Running.</span></div>
+
+<h2>Direct tests</h2>
+<button id="b1">1. Vibrate 400ms<small>Long and unmissable. If this does nothing, the API is not the problem in your page.</small></button>
+<button id="b2">2. Vibrate 30ms<small>The length the site actually asks for. Some phones cannot render this at all.</small></button>
+<button id="b3">3. Vibrate pattern<small>[40,60,40,60,40]. Rules out single-pulse rounding.</small></button>
+<button id="b4">4. iOS switch trick<small>Toggles a real switch through its label. Only iOS 17.4 to 26.4.</small></button>
+
+<h2>Scroll test</h2>
+<p class="sub">Scroll this page with a finger. Pulses fire every 240px, the same stride the site uses.</p>
+<div class="pad">keep scrolling<br>watch the log</div>
+
+<h2>Log</h2>
+<div id="log"></div>
+
+<div id="swrap"></div>
+
+<script>
+const log = document.getElementById("log");
+function say(msg, cls){
+  const d = document.createElement("div");
+  if (cls) d.className = cls;
+  d.textContent = new Date().toLocaleTimeString() + "  " + msg;
+  log.insertBefore(d, log.firstChild);
+}
+
+/* ---------- facts ---------- */
+const ua = navigator.userAgent;
+const iOSua = /iPad|iPhone|iPod/.test(ua);
+const macTouch = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+const iOS = iOSua || macTouch;
+const hasVib = typeof navigator.vibrate === "function";
+const m = /(?:iPhone )?OS (\d+)_(\d+)/.exec(ua);
+const iosVer = m ? (+m[1] + (+m[2])/100) : null;
+const inWindow = iosVer !== null && iosVer >= 17.04 && iosVer < 26.05;
+const coarse = matchMedia("(pointer:coarse)").matches;
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const facts = [
+  ["User agent", ua, null],
+  ["platform", navigator.platform || "(none)", null],
+  ["maxTouchPoints", String(navigator.maxTouchPoints || 0), null],
+  ["Detected as iOS", iOS ? "yes" : "no", null],
+  ["iOS version parsed", iosVer === null ? "could not read" : iosVer.toFixed(2),
+    iosVer === null && iOS ? "no" : null],
+  ["Inside 17.4 to 26.4", iOS ? (inWindow ? "yes" : "no") : "n/a",
+    iOS ? (inWindow ? "yes" : "no") : null],
+  ["navigator.vibrate", hasVib ? "exists" : "missing", hasVib ? "yes" : "no"],
+  ["pointer:coarse", coarse ? "yes" : "no", null],
+  ["prefers-reduced-motion", reduce ? "REDUCE" : "no-preference", reduce ? "no" : null],
+  ["Secure context", isSecureContext ? "yes" : "no (http)", isSecureContext ? null : "maybe"],
+  ["Page visible", document.visibilityState, null]
+];
+document.getElementById("facts").innerHTML = facts.map(f =>
+  '<div class="row"><span>' + f[0] + '</span><span' +
+  (f[2] ? ' class="' + f[2] + '"' : '') + '>' + f[1] + '</span></div>').join("");
+
+/* ---------- verdict ---------- */
+let v;
+if (iOS && !hasVib){
+  if (inWindow) v = "iPhone or iPad inside the switch window. Only test 4 can possibly work, and it is an unofficial side effect Apple may already have closed on your build. There is no vibration API on iOS.";
+  else if (iosVer === null) v = "iPad reporting a Mac user agent, so the version cannot be read and the site's check gives up. No haptics here by design. Falls back to sound.";
+  else v = "iOS " + iosVer.toFixed(1) + ", outside the window. Apple closed the switch trick in 26.5. Nothing in a browser can drive the Taptic Engine on this device. Expect sound instead.";
+} else if (hasVib && coarse){
+  v = "Android. The API is here, so if the buttons above do nothing the block is user activation or an OS setting, not the site. If the buttons DO work but the site does not, the site's gate is the cause.";
+} else if (hasVib && !coarse){
+  v = "Desktop browser. navigator.vibrate exists but there is no motor behind it, so it returns success and does nothing. A MacBook trackpad has no web API at all. Silence here is expected and not a bug.";
+} else {
+  v = "No vibration API and not iOS. Nothing here can produce a pulse.";
+}
+document.getElementById("vtext").textContent = v;
+say("probe ready");
+
+/* ---------- direct tests ---------- */
+function tryVib(arg, label){
+  if (!hasVib){ say(label + ": navigator.vibrate does not exist", "no"); return; }
+  let r;
+  try { r = navigator.vibrate(arg); }
+  catch (e){ say(label + ": threw " + e.message, "no"); return; }
+  say(label + ": returned " + r + (r === false ? "  (browser refused)" : "  (accepted)"),
+      r === false ? "no" : "yes");
+  if (r !== false) say("   if you felt nothing, it is the OS or the motor, not the call", "maybe");
+}
+document.getElementById("b1").onclick = () => tryVib(400, "vibrate(400)");
+document.getElementById("b2").onclick = () => tryVib(30,  "vibrate(30)");
+document.getElementById("b3").onclick = () => tryVib([40,60,40,60,40], "vibrate(pattern)");
+
+/* the switch has to be toggled through its label: WebKit ignores a script
+   click on the input itself, which is what the site was doing */
+const wrap = document.getElementById("swrap");
+wrap.innerHTML = '<input type="checkbox" switch id="hsw" tabindex="-1">' +
+                 '<label for="hsw" id="hlab"></label>';
+document.getElementById("b4").onclick = () => {
+  const lab = document.getElementById("hlab");
+  const box = document.getElementById("hsw");
+  if (!lab){ say("switch trick: element missing", "no"); return; }
+  const before = box.checked;
+  try { lab.click(); } catch (e){ say("switch trick: threw " + e.message, "no"); return; }
+  const toggled = box.checked !== before;
+  say("switch trick: label clicked, checkbox " + (toggled ? "toggled" : "did NOT toggle"),
+      toggled ? "yes" : "no");
+  if (!iOS) say("   not an iOS device, so no haptic was ever possible", "maybe");
+  else if (!inWindow) say("   iOS outside 17.4 to 26.4, expect nothing", "maybe");
+};
+
+/* ---------- scroll test, same stride as the site ---------- */
+const STRIDE = 240, GAP = 100;
+let prev = scrollY, travel = 0, last = -1e9, down = false, fired = 0, refused = 0;
+addEventListener("touchstart", () => { down = true; say("finger down"); }, { passive:true });
+addEventListener("touchend", () => { down = false; say("finger up"); }, { passive:true });
+addEventListener("scroll", () => {
+  const y = scrollY, dy = Math.abs(y - prev);
+  prev = y;
+  travel += dy;
+  if (travel < STRIDE) return;
+  travel %= STRIDE;
+  const now = performance.now();
+  if (now - last < GAP){ say("scroll: too soon, skipped"); return; }
+  last = now;
+  if (!hasVib){
+    if (iOS){
+      const lab = document.getElementById("hlab");
+      if (lab) lab.click();
+      say("scroll pulse " + (++fired) + ": switch toggled (iOS)");
+    } else say("scroll pulse: nothing available", "no");
+    return;
+  }
+  const r = navigator.vibrate(30);
+  if (r === false){
+    refused++;
+    say("scroll pulse REFUSED (" + refused + ") " + (down ? "finger down" : "coasting"), "no");
+  } else {
+    say("scroll pulse " + (++fired) + " accepted, " + (down ? "finger down" : "coasting"), "yes");
+  }
+}, { passive:true });
+</script>
+</body>
+</html>
